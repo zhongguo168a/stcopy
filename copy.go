@@ -15,7 +15,7 @@ func isHard(k reflect.Kind) bool {
 	return false
 }
 
-func getFieldVal(val reflect.Value, field reflect.StructField) (x reflect.Value) {
+func getFieldVal(val reflect.Value, field *reflect.StructField) (x reflect.Value) {
 	if val.Kind() == reflect.Map {
 		x = val.MapIndex(reflect.ValueOf(field.Name))
 	} else {
@@ -163,7 +163,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 
 		switch ctx.targetMode {
 		case TargetMap:
-			unfold := TypeSv.UnfoldType(provideTyp)
+			unfold := TypeUtiler.UnfoldType(provideTyp)
 			switch unfold.Kind() {
 			case reflect.Array, reflect.Slice:
 				slice := make([]interface{}, srcref.Len(), srcref.Cap())
@@ -220,8 +220,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 			tarref.Set(retval.Upper().Addr())
 		}
 	case reflect.Struct:
-		for i, n := 0, provideTyp.NumField(); i < n; i++ {
-			field := provideTyp.Field(i)
+		for _, field := range TypeUtiler.GetFieldRecursion(provideTyp) {
 			key := reflect.ValueOf(field.Name)
 			srcfield := getFieldVal(srcref, field)
 			if srcref.Kind() == reflect.Map {

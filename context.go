@@ -13,7 +13,7 @@ func NewContext(val interface{}) (ctx *Context, err error) {
 		return
 	}
 
-	unfold := TypeSv.UnfoldType(ref.Type())
+	unfold := TypeUtiler.UnfoldType(ref.Type())
 
 	if unfold.Kind() != reflect.Struct && unfold.Kind() != reflect.Map {
 		err = errors.New("origin must ptr struct or map")
@@ -33,7 +33,7 @@ func New(val interface{}) (ctx *Context) {
 		panic(errors.New("origin must ptr struct or map"))
 	}
 
-	unfold := TypeSv.UnfoldType(ref.Type())
+	unfold := TypeUtiler.UnfoldType(ref.Type())
 	if unfold.Kind() != reflect.Struct && unfold.Kind() != reflect.Map {
 		panic(errors.New("origin must ptr struct or map"))
 	}

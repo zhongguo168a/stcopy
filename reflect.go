@@ -80,13 +80,13 @@ func (val Value) convertToMapValue() (r Value) {
 }
 
 var (
-	TypeSv = TypeService(0)
+	TypeUtiler = TypeUtil(0)
 )
 
-type TypeService int
+type TypeUtil int
 
 // 获取正确的反射对象，如果nil，创建新的
-func (*TypeService) UnfoldType(typ reflect.Type) reflect.Type {
+func (*TypeUtil) UnfoldType(typ reflect.Type) reflect.Type {
 	switch typ.Kind() {
 	case reflect.Struct:
 	case reflect.Ptr:
@@ -95,4 +95,24 @@ func (*TypeService) UnfoldType(typ reflect.Type) reflect.Type {
 	}
 
 	return typ
+}
+
+// 获取
+func (sv *TypeUtil) GetFieldRecursion(typ reflect.Type) (r []*reflect.StructField) {
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		switch field.Type.Kind() {
+		case reflect.Struct:
+			if field.Anonymous == true {
+
+				r = append(r, sv.GetFieldRecursion(field.Type)...)
+			} else {
+				r = append(r, &field)
+			}
+
+		default:
+			r = append(r, &field)
+		}
+	}
+	return
 }
