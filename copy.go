@@ -1,10 +1,10 @@
 package stcopy
 
 import (
-	"code.zhongguo168a.top/zg168a/gocodes/utils/convertutil"
 	"fmt"
 	"github.com/pkg/errors"
 	"reflect"
+	"strconv"
 )
 
 func isHard(k reflect.Kind) bool {
@@ -266,9 +266,9 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 				if k.Type() != tarref.Type().Key() {
 					switch tarref.Type().Key().Kind() {
 					case reflect.String:
-						x = reflect.ValueOf(convertutil.Convert2String(k.Interface()))
+						x = reflect.ValueOf(Convert2String(k.Interface()))
 					case reflect.Int:
-						x = reflect.ValueOf(convertutil.Convert2Int64(k.Interface()))
+						x = reflect.ValueOf(Convert2Int64(k.Interface()))
 
 					}
 				} else {
@@ -307,198 +307,71 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 	fmt.Println("resut >", result.Upper())
 	return
 }
+func Convert2String(ival interface{}) string {
+	val := ""
+	switch x := ival.(type) {
+	case int:
+		val = strconv.Itoa(x)
+	case int8:
+		val = strconv.Itoa(int(x))
+	case int16:
+		val = strconv.Itoa(int(x))
+	case int32:
+		val = strconv.Itoa(int(x))
+	case int64:
+		val = strconv.Itoa(int(x))
+	case uint:
+		val = strconv.Itoa(int(x))
+	case uint8:
+		val = strconv.Itoa(int(x))
+	case uint16:
+		val = strconv.Itoa(int(x))
+	case uint32:
+		val = strconv.Itoa(int(x))
+	case uint64:
+		val = strconv.Itoa(int(x))
+	case float32:
+		val = strconv.Itoa(int(x))
+	case float64:
+		val = strconv.Itoa(int(x))
+	}
+	return val
+}
 
-//
-//func (ctx *Context) copy(source, target reflect.Value, provideTyp reflect.Type, depth int) (result reflect.Value, err error) {
-//	fmt.Println("||| copy", "provide=", provideTyp)
-//	fmt.Println("srctyp=", source.Type(), "src=", source)
-//	fmt.Println("tartyp=", (Value)(target).GetTypeString(), "tar=", target, ",  canset=", target.CanSet())
-//
-//	if source.IsValid() == false || isValueNil(source) {
-//		return
-//	}
-//
-//	// 如果源与目标的类型不一致
-//	// 0层不可以convert, 直接调用Convert函数处理
-//	if depth != 0 && source.Kind() != target.Kind() {
-//		switch ctx.direction {
-//		case AtoB:
-//			_, ok := source.Type().MethodByName("ConvertTo")
-//			if ok == true {
-//				methodVal := source.MethodByName("ConvertTo")
-//				results := methodVal.Call([]reflect.Value{reflect.ValueOf(ctx.Params)})
-//				result = results[0]
-//				return
-//			}
-//		case AfromB:
-//			_, ok := source.Type().MethodByName("ConvertFrom")
-//			if ok == true {
-//				methodVal := source.MethodByName("ConvertFrom")
-//				results := methodVal.Call([]reflect.Value{target, reflect.ValueOf(ctx.Params)})
-//				result = results[0]
-//				return
-//			}
-//		}
-//	}
-//
-//	// 默认
-//	//
-//	switch provideTyp.Kind() {
-//	case reflect.Interface:
-//		if target.IsValid() == false || target.CanSet() == false {
-//			target = reflect.New(provideTyp).Elem()
-//		}
-//	case reflect.Map:
-//	case reflect.Struct:
-//		if target.IsValid() == false || target.IsNil() {
-//			target = reflect.New(provideTyp).Elem()
-//		}
-//	case reflect.Ptr:
-//		if target.IsValid() == false || target.IsNil() {
-//			target = reflect.New(provideTyp).Elem()
-//		}
-//	default:
-//		if target.IsValid() == false || target.CanSet() == false {
-//			target = reflect.New(provideTyp).Elem()
-//		}
-//	}
-//
-//	if provideTyp.Kind() != reflect.Interface {
-//		if source.Kind() == reflect.Interface {
-//			source = source.Elem()
-//		}
-//		if target.Kind() == reflect.Interface {
-//			target = target.Elem()
-//		}
-//	}
-//
-//	var retval reflect.Value
-//	switch provideTyp.Kind() {
-//	case reflect.Slice, reflect.Array:
-//		if source.Len() == 0 {
-//			return
-//		}
-//		for i := 0; i < source.Len(); i++ {
-//			srcitem := source.Index(i)
-//			taritem := func() (x reflect.Value) {
-//				x = target.Index(i)
-//				if x.IsValid() == false || x.IsNil() || x.CanSet() == false {
-//					x = newMapValue(provideTyp.Elem(), srcitem, false)
-//				}
-//				return
-//			}()
-//			ctx.copy(srcitem, taritem, provideTyp.Elem(), depth+1)
-//			target.Index(i).Set(convertToMapValue(taritem))
-//		}
-//	case reflect.Interface:
-//		//srcelem := source.Elem()
-//		//tarelem := func() (x reflect.Value) {
-//		//	x = target.Elem()
-//		//	switch srcelem.Kind() {
-//		//	case reflect.Map, reflect.Ptr, reflect.Interface:
-//		//		if x.IsValid() == false || x.IsNil() {
-//		//			x = newMapValue(srcelem.Type(), srcelem, true)
-//		//		}
-//		//	default:
-//		//		x = newMapValue(srcelem.Type(), srcelem, true)
-//		//	}
-//		//	return
-//		//}()
-//		retval, err = ctx.copy(source.Elem(), target.Elem(), source.Elem().Type(), depth+1)
-//		if err != nil {
-//			return
-//		}
-//		target.Set(retval)
-//	case reflect.Ptr:
-//		retval, err = ctx.copy(source.Elem(), target.Elem(), provideTyp.Elem(), depth+1)
-//		if err != nil {
-//			return
-//		}
-//		target.Set(retval)
-//	case reflect.Struct:
-//		for i, n := 0, provideTyp.NumField(); i < n; i++ {
-//			field := provideTyp.Field(i)
-//			key := reflect.ValueOf(field.Name)
-//			srcfield := getFieldVal(source, field)
-//			if source.Kind() == reflect.Map {
-//				if srcfield.IsValid() == false || srcfield.IsNil() {
-//					continue
-//				}
-//			}
-//			fmt.Println("||| copy struct field: ", field.Name, ", fieldtyp=", field.Type)
-//			fmt.Println("src=", srcfield, ", typ=", srcfield.Type())
-//
-//			// 获取目标值
-//			tarfield := getFieldVal(target, field)
-//			fmt.Println("tar=", tarfield, ", typ=", )
-//			new, _ := ctx.copy(srcfield, tarfield, field.Type, depth+1)
-//
-//			switch target.Kind() {
-//			case reflect.Struct:
-//				target.FieldByName(field.Name).Set(new)
-//			case reflect.Map:
-//				tarfield = convertToMapValue(new)
-//				target.SetMapIndex(key, new)
-//			}
-//
-//		}
-//		return
-//	case reflect.Map:
-//		for _, k := range source.MapKeys() {
-//
-//			val1 := source.MapIndex(k)
-//			if val1.IsValid() == false {
-//				continue
-//			}
-//
-//			val2 := func() (x reflect.Value) {
-//				x = target.MapIndex(k)
-//				if !x.IsValid() || x.IsNil() || x.CanSet() == false {
-//					x = newMapValue(val1.Type(), val1, false)
-//				}
-//				return
-//			}()
-//
-//			ctx.copy(val1, val2, val1.Type(), depth+1)
-//			val2 = convertToMapValue(val2)
-//			key := func() (x reflect.Value) {
-//				if k.Type() != target.Type().Key() {
-//					switch target.Type().Key().Kind() {
-//					case reflect.String:
-//						x = reflect.ValueOf(convertutil.Convert2String(k.Interface()))
-//					case reflect.Int:
-//						x = reflect.ValueOf(convertutil.Convert2Int64(k.Interface()))
-//
-//					}
-//				} else {
-//					x = k
-//				}
-//				return
-//			}()
-//			target.SetMapIndex(key, val2)
-//		}
-//
-//	case reflect.Func:
-//		panic("not suppor")
-//	default:
-//		target.Set(func() (x reflect.Value) {
-//			// 规定的类型跟源类型不一致的情况
-//			if source.Type() != provideTyp {
-//				switch source.Type().Kind() {
-//				case reflect.Interface:
-//					x = source.Elem().Convert(provideTyp)
-//				default:
-//					x = source.Convert(provideTyp)
-//				}
-//			} else {
-//				x = source
-//			}
-//			return
-//		}())
-//
-//		fmt.Println("default set >", source, target, target.Type())
-//	}
-//
-//	result = target.convertToMapValue(target)
-//	return
-//}
+func Convert2Int64(ival interface{}) int64 {
+	val := int64(0)
+	switch data := ival.(type) {
+	case int:
+		val = int64(data)
+	case int8:
+		val = int64(data)
+	case int16:
+		val = int64(data)
+	case int32:
+		val = int64(data)
+	case int64:
+		val = data
+	case uint:
+		val = int64(data)
+	case uint8:
+		val = int64(data)
+	case uint16:
+		val = int64(data)
+	case uint32:
+		val = int64(data)
+	case uint64:
+		val = int64(data)
+	case float32:
+		val = int64(data)
+	case float64:
+		val = int64(data)
+	case string:
+		i, err := strconv.Atoi(data)
+		if err != nil {
+			panic(err)
+		}
+		val = int64(i)
+	}
+
+	return val
+}
