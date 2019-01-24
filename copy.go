@@ -1,7 +1,6 @@
 package stcopy
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"reflect"
 	"strconv"
@@ -84,15 +83,16 @@ func (ctx *Context) From(val interface{}) (err error) {
 	if err != nil {
 		return
 	}
+
 	return
 }
 
 func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth int) (result Value, err error) {
 	srcref := source.Upper()
 	tarref := target.Upper()
-	fmt.Println("\n||| to", "provide=", provideTyp)
-	fmt.Println("srctyp=", srcref.Type(), "src=", srcref)
-	fmt.Println("tartyp=", target.GetTypeString(), "tar=", tarref, ",  canset=", tarref.CanSet())
+	//fmt.Println("\n||| to", "provide=", provideTyp)
+	//fmt.Println("srctyp=", srcref.Type(), "src=", srcref)
+	//fmt.Println("tartyp=", target.GetTypeString(), "tar=", tarref, ",  canset=", tarref.CanSet())
 
 	// 源是否空
 	if srcref.IsValid() == false {
@@ -121,6 +121,11 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 			if ok == true {
 				methodVal := srcref.MethodByName("ConvertTo")
 				results := methodVal.Call([]reflect.Value{reflect.ValueOf(ctx)})
+				if results[1].IsNil() == false {
+					err = results[1].Interface().(error)
+					return
+				}
+
 				result = Value(results[0])
 				return
 			}
@@ -183,7 +188,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 			tarref = reflect.New(provideTyp).Elem()
 		}
 	}
-	fmt.Println("last target=", tarref, tarref.Type(), tarref.CanSet())
+	//fmt.Println("last target=", tarref, tarref.Type(), tarref.CanSet())
 
 	var retval Value
 	switch provideTyp.Kind() {
@@ -228,7 +233,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 					continue
 				}
 			}
-			fmt.Println(">>> copy struct field: ", field.Name, ", fieldtyp=", field.Type)
+			//fmt.Println(">>> copy struct field: ", field.Name, ", fieldtyp=", field.Type)
 			// 获取目标值
 			tarfield := getFieldVal(tarref, field)
 			retval, err = ctx.copy(Value(srcfield), Value(tarfield), field.Type, depth+1)
@@ -236,7 +241,6 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 				return
 			}
 
-			fmt.Println("copytomap[286]>", key, retval.Upper())
 			switch tarref.Kind() {
 			case reflect.Map:
 				tarref.SetMapIndex(key, retval.Upper())
@@ -257,8 +261,8 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 			}
 			val2 := tarref.MapIndex(k)
 
-			fmt.Println("||| copy map key: ", k, ", fieldtyp=", val1.Type())
-			fmt.Println("src=", val1, ", typ=", val2)
+			//fmt.Println("||| copy map key: ", k, ", fieldtyp=", val1.Type())
+			//fmt.Println("src=", val1, ", typ=", val2)
 
 			retval, _ := ctx.copy(Value(val1), Value(val2), val1.Type(), depth+1)
 			key := func() (x reflect.Value) {
@@ -303,7 +307,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 		result = result.convertToMapValue()
 	}
 
-	fmt.Println("resut >", result.Upper())
+	//fmt.Println("resut >", result.Upper())
 	return
 }
 func Convert2String(ival interface{}) string {

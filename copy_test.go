@@ -59,10 +59,11 @@ type Convert struct {
 	Int int16
 }
 
-func (s *Convert) ConvertTo(ctx *Context) string {
+func (s *Convert) ConvertTo(ctx *Context) (r string, err error) {
 	fmt.Println("copytomap_test[54]>")
 	b, _ := json.Marshal(s)
-	return string(b)
+	r = string(b)
+	return
 }
 
 func (s *Convert) ConvertFrom(ctx *Context, val string) (err error) {
