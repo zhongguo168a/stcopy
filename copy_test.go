@@ -161,10 +161,6 @@ func TestCopyStructToStructConvert(t *testing.T) {
 		&ClassConvert{Convert: &Convert{Int: 100}, Enum: TestEnum(100)}, // source
 		&ClassConvert2{Convert: `{"Int":99}`, Enum: 99},                 // target
 		&ClassConvert2{Convert: `{"Int":100}`, Enum: 100},               // result
-		// next
-		//&Class2{String: &Convert{Int: 3}, Int: 2}, // target
-		//&ClassBase{Int: 1},                      // target
-		//&ClassBase{String: `{"Int":3}`, Int: 1}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {

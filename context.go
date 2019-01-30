@@ -68,8 +68,6 @@ type Context struct {
 	direction Direction
 	//
 	targetMode TargetMode
-	// 使用指定的描述集合
-	descMap *DescriptionMap
 	// 规定的类型
 	provideTyp reflect.Type
 	// 自定义的参数, 传递给转化函数使用
@@ -105,11 +103,6 @@ func (ctx *Context) getProvideTyp(src, tar Value) (typ reflect.Type, err error) 
 
 	err = errors.New("not found")
 	return
-}
-
-func (ctx *Context) WithDescriptionMap(val *DescriptionMap) *Context {
-	ctx.descMap = val
-	return ctx
 }
 
 func (ctx *Context) WithProvideTyp(val reflect.Type) *Context {
