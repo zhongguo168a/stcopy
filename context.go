@@ -28,7 +28,10 @@ func NewContext(val interface{}) (ctx *Context, err error) {
 
 func New(val interface{}) (ctx *Context) {
 	ref := reflect.ValueOf(val)
+	return NewValue(ref)
+}
 
+func NewValue(ref reflect.Value) (ctx *Context) {
 	if ref.Kind() != reflect.Ptr {
 		panic(errors.New("origin must ptr struct or map"))
 	}
@@ -51,10 +54,11 @@ const (
 	AfromB
 )
 
-type TargetMode int
+// 目标的类型
+type TargetType int
 
 const (
-	TargetMap TargetMode = iota
+	TargetMap TargetType = iota
 	TargetStruct
 )
 
@@ -66,14 +70,16 @@ type Context struct {
 	valueB Value
 	// copy方向
 	direction Direction
-	//
-	targetMode TargetMode
+	// 目标的类型
+	targetType TargetType
 	// 规定的类型
 	provideTyp reflect.Type
 	// 自定义的参数, 传递给转化函数使用
 	Params interface{}
 	// 配置
 	Config *Config
+	// 类型的映射
+	typeMap TypeMap
 }
 
 type Config struct {
@@ -107,6 +113,11 @@ func (ctx *Context) getProvideTyp(src, tar Value) (typ reflect.Type, err error) 
 
 func (ctx *Context) WithProvideTyp(val reflect.Type) *Context {
 	ctx.provideTyp = val
+	return ctx
+}
+
+func (ctx *Context) WithTypeMap(val TypeMap) *Context {
+	ctx.typeMap = val
 	return ctx
 }
 

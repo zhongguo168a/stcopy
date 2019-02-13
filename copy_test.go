@@ -59,14 +59,14 @@ type Convert struct {
 	Int int16
 }
 
-func (s *Convert) ConvertTo(ctx *Context) (r string, err error) {
+func (s *Convert) ToString(ctx *Context) (r string) {
 	fmt.Println("copytomap_test[54]>")
 	b, _ := json.Marshal(s)
 	r = string(b)
 	return
 }
 
-func (s *Convert) ConvertFrom(ctx *Context, val string) (err error) {
+func (s *Convert) FromString(ctx *Context, val string) (err error) {
 	err = json.Unmarshal([]byte(val), &s)
 	if err != nil {
 		return
@@ -77,7 +77,7 @@ func (s *Convert) ConvertFrom(ctx *Context, val string) (err error) {
 func TestCopyMapToStructCombination(t *testing.T) {
 
 	sources := []interface{}{
-		&map[string]interface{}{"String": "test 1", "Int": 1, "Struct": &map[string]interface{}{"String": "test struct", "Bool": false, "Int": int64(100)}}, // source
+		&map[string]interface{}{"String": "test 1", "Int": 1, "Struct": &map[string]interface{}{"String": "test struct", "Bool": false, "Int": int(100)}}, // source
 		&ClassCombination{}, // target
 		&ClassCombination{ClassBase: ClassBase{String: "test 1", Int: 1}, ClassStruct: ClassStruct{Struct: &Struct{String: "test struct", Int: 100}}}, // result
 		// next
@@ -211,9 +211,9 @@ func TestCopyStructFromMapConvert(t *testing.T) {
 		&ClassConvert{Convert: &Convert{Int: 99}, Enum: TestEnum(99)},  // target
 		&ClassConvert{Convert: &Convert{Int: 100}, Enum: TestEnum(99)}, // result
 		// next
-		&map[string]interface{}{"Enum": 100}, // source
-		&ClassConvert{Enum: TestEnum(99)},    // target
-		&ClassConvert{Enum: TestEnum(100)},   // result
+		//&map[string]interface{}{"Enum": 100}, // source
+		//&ClassConvert{Enum: TestEnum(99)},    // target
+		//&ClassConvert{Enum: TestEnum(100)},   // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
@@ -236,9 +236,9 @@ func TestCopyStructFromMapConvert(t *testing.T) {
 func TestCopyStructToMapConvert(t *testing.T) {
 
 	sources := []interface{}{
-		&ClassConvert{Convert: &Convert{Int: 100}},                          // source
-		&map[string]interface{}{},                                           // target
-		&map[string]interface{}{"Convert": `{"Int":100}`, "Enum": int64(0)}, // result
+		&ClassConvert{Convert: &Convert{Int: 100}},                        // source
+		&map[string]interface{}{},                                         // target
+		&map[string]interface{}{"Convert": `{"Int":100}`, "Enum": int(0)}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
@@ -257,17 +257,17 @@ func TestCopyStructToMapConvert(t *testing.T) {
 func TestCopyStructToMapBase(t *testing.T) {
 
 	sources := []interface{}{
-		&ClassStruct{&Struct{String: "test struct", Int: 100}}, // source
-		&map[string]interface{}{},                              // target
-		&map[string]interface{}{"Struct": &map[string]interface{}{"String": "test struct", "Bool": false, "Int": int64(100)}}, // result
+		//&ClassStruct{&Struct{String: "test struct", Int: 100}}, // source
+		//&map[string]interface{}{},                              // target
+		//&map[string]interface{}{"Struct": &map[string]interface{}{"String": "test struct", "Bool": false, "Int": int(100)}}, // result
 		// next
-		&ClassBase{String: "test 1", Int: 1}, // source
-		&map[string]interface{}{},            // target
-		&map[string]interface{}{"String": "test 1", "Int": int64(1), "Bool": false}, // result
+		&ClassBase{String: "test 1", Int: 1},                                 // source
+		&map[string]interface{}{},                                            // target
+		&map[string]interface{}{"String": "test 1", "Int": 1, "Bool": false}, // result
 		// next
-		&ClassBase{String: "test 1", Int: 1},                                        // source
-		&map[string]interface{}{"Int": 2, "Bool": true},                             // target
-		&map[string]interface{}{"String": "test 1", "Int": int64(1), "Bool": false}, // result
+		//&ClassBase{String: "test 1", Int: 1},                                        // source
+		//&map[string]interface{}{"Int": 2, "Bool": true},                             // target
+		//&map[string]interface{}{"String": "test 1", "Int": int64(1), "Bool": false}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
@@ -275,8 +275,16 @@ func TestCopyStructToMapBase(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
+
 		debugutil.PrintJson("result=", sources[i+2])
 		debugutil.PrintJson("target=", sources[i+1])
+
+		s2 := sources[i+2].(*map[string]interface{})
+		s2a := *s2
+		s1 := sources[i+1].(*map[string]interface{})
+		s1a := *s1
+		fmt.Printf("copy_test[278]> %T\n", s2a["Int"])
+		fmt.Printf("copy_test[278]> %T\n", s1a["Int"])
 		if reflect.DeepEqual(sources[i+2], sources[i+1]) == false {
 			panic("")
 		}
@@ -288,11 +296,11 @@ func TestCopyMapToMapBase(t *testing.T) {
 	sources := []interface{}{
 		&map[string]interface{}{"String": "test 1", "Int": 1, "Bool": false}, // source
 		&map[string]interface{}{}, // target
-		&map[string]interface{}{"String": "test 1", "Int": int64(1), "Bool": false}, // result
+		&map[string]interface{}{"String": "test 1", "Int": int(1), "Bool": false}, // result
 		//next struct
-		//&map[string]interface{}{"Struct": &map[string]interface{}{"String": "test struct 1", "Bool": true, "Int": int64(1)}}, // source
+		//&map[string]interface{}{"Struct": &map[string]interface{}{"String": "test struct 1", "Bool": true, "Int": int(1)}}, // source
 		//&map[string]interface{}{"Struct": &map[string]interface{}{"String": "test struct", "Bool": false}},                   // target
-		//&map[string]interface{}{"Struct": &map[string]interface{}{"String": "test struct 1", "Bool": true, "Int": int64(1)}}, // result
+		//&map[string]interface{}{"Struct": &map[string]interface{}{"String": "test struct 1", "Bool": true, "Int": int(1)}}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
@@ -359,13 +367,13 @@ func TestCopyMapToMapMap(t *testing.T) {
 		&map[string]interface{}{"Map": map[string]interface{}{"a": "a2", "b": "b2"}},            // target
 		&map[string]interface{}{"Map": map[string]interface{}{"a": "a1", "b": "b2", "c": "c3"}}, // result
 		//// next map struct
-		&map[string]interface{}{"MapStruct": map[string]interface{}{"a": &map[string]interface{}{"String": "test struct 1", "Bool": true, "Int": int64(1)}}}, // source
-		&map[string]interface{}{"MapStruct": map[string]interface{}{"a": &map[string]interface{}{"String": "test struct", "Bool": false}}},                   // target
-		&map[string]interface{}{"MapStruct": map[string]interface{}{"a": &map[string]interface{}{"String": "test struct 1", "Bool": true, "Int": int64(1)}}}, // result
+		&map[string]interface{}{"MapStruct": map[string]interface{}{"a": &map[string]interface{}{"String": "test struct 1", "Bool": true, "Int": int(1)}}}, // source
+		&map[string]interface{}{"MapStruct": map[string]interface{}{"a": &map[string]interface{}{"String": "test struct", "Bool": false}}},                 // target
+		&map[string]interface{}{"MapStruct": map[string]interface{}{"a": &map[string]interface{}{"String": "test struct 1", "Bool": true, "Int": int(1)}}}, // result
 		// next map struct
-		&map[string]interface{}{"MapStruct": map[string]interface{}{"a": &map[string]interface{}{"String": "test struct 1", "Bool": true, "Int": int64(1)}, "c": &map[string]interface{}{"String": "test struct 1", "Int": int64(1)}}},                                                                       // source
-		&map[string]interface{}{"MapStruct": map[string]interface{}{"a": &map[string]interface{}{"String": "test struct", "Bool": false}, "b": &map[string]interface{}{"String": "test struct", "Bool": false}}},                                                                                             // target
-		&map[string]interface{}{"MapStruct": map[string]interface{}{"a": &map[string]interface{}{"String": "test struct 1", "Bool": true, "Int": int64(1)}, "b": &map[string]interface{}{"String": "test struct", "Bool": false}, "c": &map[string]interface{}{"String": "test struct 1", "Int": int64(1)}}}, // result
+		&map[string]interface{}{"MapStruct": map[string]interface{}{"a": &map[string]interface{}{"String": "test struct 1", "Bool": true, "Int": int(1)}, "c": &map[string]interface{}{"String": "test struct 1", "Int": int(1)}}},                                                                       // source
+		&map[string]interface{}{"MapStruct": map[string]interface{}{"a": &map[string]interface{}{"String": "test struct", "Bool": false}, "b": &map[string]interface{}{"String": "test struct", "Bool": false}}},                                                                                         // target
+		&map[string]interface{}{"MapStruct": map[string]interface{}{"a": &map[string]interface{}{"String": "test struct 1", "Bool": true, "Int": int(1)}, "b": &map[string]interface{}{"String": "test struct", "Bool": false}, "c": &map[string]interface{}{"String": "test struct 1", "Int": int(1)}}}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
@@ -406,11 +414,11 @@ func TestCopyStructAnyToMap(t *testing.T) {
 		//&Struct{
 		//	String: "test struct",
 		//},
-		//&map[string]interface{}{"_type": "Struct", "String": "test struct", "Bool": false, "Int": int64(0)},
+		//&map[string]interface{}{"_type": "Struct", "String": "test struct", "Bool": false, "Int": int(0)},
 		Struct{
 			String: "test struct",
 		},
-		map[string]interface{}{"_type": "Struct", "String": "test struct", "Int": int64(0), "Bool": false},
+		map[string]interface{}{"_type": "Struct", "String": "test struct", "Int": int(0), "Bool": false},
 		[]string{"1", "2"},
 		[]interface{}{"1", "2"},
 		map[string]string{
@@ -426,8 +434,8 @@ func TestCopyStructAnyToMap(t *testing.T) {
 			"b": {String: "test map struct b"},
 		},
 		map[string]interface{}{
-			"a": &map[string]interface{}{"String": "test map struct a", "Int": int64(0), "Bool": false},
-			"b": &map[string]interface{}{"String": "test map struct b", "Int": int64(0), "Bool": false},
+			"a": &map[string]interface{}{"String": "test map struct a", "Int": int(0), "Bool": false},
+			"b": &map[string]interface{}{"String": "test map struct b", "Int": int(0), "Bool": false},
 		},
 	}
 

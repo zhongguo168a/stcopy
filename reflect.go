@@ -5,6 +5,16 @@ import (
 	"reflect"
 )
 
+func NewTypeMap(types []reflect.Type) (r TypeMap) {
+	r = TypeMap{}
+	for _, val := range types {
+		r[val.Name()] = val
+	}
+	return
+}
+
+type TypeMap map[string]reflect.Type
+
 type Value reflect.Value
 
 func (val Value) Upper() reflect.Value {
@@ -63,7 +73,7 @@ func (val Value) convertToMapValue() (r Value) {
 	var a reflect.Value
 	switch valref.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		a = reflect.ValueOf(valref.Int())
+		a = reflect.ValueOf(int(valref.Int()))
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		a = reflect.ValueOf(valref.Uint())
 	case reflect.Float32, reflect.Float64:

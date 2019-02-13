@@ -1,6 +1,8 @@
 package stcopy
 
 import (
+	"code.zhongguo168a.top/zg168a/gocodes/utils/stringutil"
+	"fmt"
 	"github.com/pkg/errors"
 	"reflect"
 	"strconv"
@@ -23,7 +25,7 @@ func getFieldVal(val reflect.Value, field *reflect.StructField) (x reflect.Value
 	return
 }
 
-func getTargetMode(val Value) TargetMode {
+func getTargetMode(val Value) TargetType {
 	if val.Upper().Kind() == reflect.Map {
 		return TargetMap
 	}
@@ -51,7 +53,7 @@ func (ctx *Context) To(val interface{}) (err error) {
 		}
 		ctx.provideTyp = provideTyp
 	}
-	ctx.targetMode = getTargetMode(ctx.valueB.Indirect())
+	ctx.targetType = getTargetMode(ctx.valueB.Indirect())
 
 	_, err = ctx.copy(ctx.valueA, ctx.valueB, ctx.provideTyp, 0)
 	if err != nil {
@@ -73,13 +75,16 @@ func (ctx *Context) From(val interface{}) (err error) {
 			err = errors.New("must set provide type")
 			return
 		}
+	} else {
+		ctx.provideTyp, err = ctx.getProvideTyp(ctx.valueB, ctx.valueA)
+		if err != nil {
+			err = errors.New("must set provide type")
+			return
+		}
 	}
-	ctx.targetMode = getTargetMode(ctx.valueA.Indirect())
-	provideTyp, geterr := ctx.getProvideTyp(ctx.valueB, ctx.valueA)
-	if geterr != nil {
-		return
-	}
-	_, err = ctx.copy(ctx.valueB, ctx.valueA, provideTyp, 0)
+	ctx.targetType = getTargetMode(ctx.valueA.Indirect())
+
+	_, err = ctx.copy(ctx.valueB, ctx.valueA, ctx.provideTyp, 0)
 	if err != nil {
 		return
 	}
@@ -90,9 +95,9 @@ func (ctx *Context) From(val interface{}) (err error) {
 func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth int) (result Value, err error) {
 	srcref := source.Upper()
 	tarref := target.Upper()
-	//fmt.Println("\n||| to", "provide=", provideTyp)
-	//fmt.Println("srctyp=", srcref.Type(), "src=", srcref)
-	//fmt.Println("tartyp=", target.GetTypeString(), "tar=", tarref, ",  canset=", tarref.CanSet())
+	fmt.Println("\n||| to", "provide=", provideTyp)
+	fmt.Println("srctyp=", srcref.Type(), "src=", srcref)
+	fmt.Println("tartyp=", target.GetTypeString(), "tar=", tarref, ",  canset=", tarref.CanSet())
 
 	// 源是否空
 	if srcref.IsValid() == false {
@@ -113,33 +118,67 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 	}
 
 	// 如果源与目标的类型不一致
-	// 0层不可以convert, 直接调用Convert函数处理
+	// 0层不可以convert, 请直接调用Convert函数处理
 	if depth != 0 && srcref.Kind() != tarref.Kind() {
 		switch ctx.direction {
 		case AtoB:
-			_, ok := srcref.Type().MethodByName("ConvertTo")
+			mname := "To" + ctx.getMethodType(srcref)
+			mtype, ok := srcref.Type().MethodByName(mname)
 			if ok == true {
-				methodVal := srcref.MethodByName("ConvertTo")
-				results := methodVal.Call([]reflect.Value{reflect.ValueOf(ctx)})
-				if results[1].IsNil() == false {
-					err = results[1].Interface().(error)
+				methodVal := srcref.MethodByName(mname)
+				if mtype.Type.NumIn() > 2 {
+					err = errors.New("func " + mname + " NumIn() must 1 or 0")
 					return
 				}
+				results := func() (x []reflect.Value) {
+					if mtype.Type.NumIn() == 2 {
+						x = methodVal.Call([]reflect.Value{reflect.ValueOf(ctx)})
 
+					} else {
+						x = methodVal.Call([]reflect.Value{})
+					}
+					return
+				}()
+				// 包含error
+				if mtype.Type.NumOut() > 1 {
+					if results[1].IsNil() == false {
+						err = results[1].Interface().(error)
+						return
+					}
+				}
 				result = Value(results[0])
 				return
 			}
 		case AfromB:
-			_, ok := tarref.Type().MethodByName("ConvertFrom")
-			if ok == true {
-				methodVal := tarref.MethodByName("ConvertFrom")
-				results := methodVal.Call([]reflect.Value{reflect.ValueOf(ctx), srcref})
-				if results[0].IsNil() == false {
-					err = results[0].Interface().(error)
+			if tarref.IsValid() == true {
+				mname := "From" + ctx.getMethodType(srcref)
+				mtype, ok := tarref.Type().MethodByName(mname)
+				if ok == true {
+					methodVal := tarref.MethodByName(mname)
+					if mtype.Type.NumIn() > 3 || mtype.Type.NumIn() == 1 {
+						err = errors.New("func " + mname + " NumIn() must 2 or 1")
+						return
+					}
+
+					results := func() (x []reflect.Value) {
+						if mtype.Type.NumIn() == 3 {
+							x = methodVal.Call([]reflect.Value{reflect.ValueOf(ctx), srcref})
+						} else {
+							x = methodVal.Call([]reflect.Value{srcref})
+						}
+						return
+					}()
+
+					if mtype.Type.NumOut() > 0 {
+						if results[0].IsNil() == false {
+							err = results[0].Interface().(error)
+							return
+						}
+					}
+
 					return
 				}
-				result = Value(tarref)
-				return
+
 			}
 		}
 	}
@@ -166,7 +205,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 	if checkNewTarget {
 		// 创建新的值
 
-		switch ctx.targetMode {
+		switch ctx.targetType {
 		case TargetMap:
 			unfold := TypeUtiler.UnfoldType(provideTyp)
 			switch unfold.Kind() {
@@ -271,7 +310,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 					case reflect.String:
 						x = reflect.ValueOf(Convert2String(k.Interface()))
 					case reflect.Int:
-						x = reflect.ValueOf(Convert2Int64(k.Interface()))
+						x = reflect.ValueOf(Convert2Int(k.Interface()))
 
 					}
 				} else {
@@ -303,13 +342,19 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 	}
 
 	result = Value(tarref)
-	if ctx.targetMode == TargetMap {
+	if ctx.targetType == TargetMap {
 		result = result.convertToMapValue()
 	}
 
 	//fmt.Println("resut >", result.Upper())
 	return
 }
+
+func (ctx *Context) getMethodType(val reflect.Value) (r string) {
+	r = stringutil.UpperFirst(val.Kind().String())
+	return
+}
+
 func Convert2String(ival interface{}) string {
 	val := ""
 	switch x := ival.(type) {
@@ -341,39 +386,39 @@ func Convert2String(ival interface{}) string {
 	return val
 }
 
-func Convert2Int64(ival interface{}) int64 {
-	val := int64(0)
+func Convert2Int(ival interface{}) int {
+	val := int(0)
 	switch data := ival.(type) {
 	case int:
-		val = int64(data)
+		val = int(data)
 	case int8:
-		val = int64(data)
+		val = int(data)
 	case int16:
-		val = int64(data)
+		val = int(data)
 	case int32:
-		val = int64(data)
+		val = int(data)
 	case int64:
-		val = data
+		val = int(data)
 	case uint:
-		val = int64(data)
+		val = int(data)
 	case uint8:
-		val = int64(data)
+		val = int(data)
 	case uint16:
-		val = int64(data)
+		val = int(data)
 	case uint32:
-		val = int64(data)
+		val = int(data)
 	case uint64:
-		val = int64(data)
+		val = int(data)
 	case float32:
-		val = int64(data)
+		val = int(data)
 	case float64:
-		val = int64(data)
+		val = int(data)
 	case string:
 		i, err := strconv.Atoi(data)
 		if err != nil {
 			panic(err)
 		}
-		val = int64(i)
+		val = int(i)
 	}
 
 	return val
