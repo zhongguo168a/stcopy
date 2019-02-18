@@ -2,7 +2,6 @@ package stcopy
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strconv"
 )
@@ -13,8 +12,8 @@ func (ctx *Context) Valid() error {
 
 func (ctx *Context) valid(source Value, provideTyp reflect.Type, depth int) (err error) {
 	srcref := source.Upper()
-	fmt.Println("\n||| to", "provide=", provideTyp)
-	fmt.Println("srctyp=", srcref.Type(), "src=", srcref)
+	//fmt.Println("\n||| to", "provide=", provideTyp)
+	//fmt.Println("srctyp=", srcref.Type(), "src=", srcref)
 
 	// 源是否空
 	if srcref.IsValid() == false {

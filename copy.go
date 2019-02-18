@@ -1,7 +1,6 @@
 package stcopy
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"github.com/zhongguo168a/gocodes/utils/stringutil"
 	"reflect"
@@ -95,9 +94,9 @@ func (ctx *Context) From(val interface{}) (err error) {
 func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth int) (result Value, err error) {
 	srcref := source.Upper()
 	tarref := target.Upper()
-	fmt.Println("\n||| to", "provide=", provideTyp)
-	fmt.Println("srctyp=", srcref.Type(), "src=", srcref)
-	fmt.Println("tartyp=", target.GetTypeString(), "tar=", tarref, ",  canset=", tarref.CanSet())
+	//fmt.Println("\n||| to", "provide=", provideTyp)
+	//fmt.Println("srctyp=", srcref.Type(), "src=", srcref)
+	//fmt.Println("tartyp=", target.GetTypeString(), "tar=", tarref, ",  canset=", tarref.CanSet())
 
 	// 源是否空
 	if srcref.IsValid() == false {
