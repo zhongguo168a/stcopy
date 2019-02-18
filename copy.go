@@ -121,7 +121,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 	if depth != 0 && srcref.Kind() != tarref.Kind() {
 		switch ctx.direction {
 		case AtoB:
-			mname := "To" + ctx.getMethodType(srcref)
+			mname := "To" + ctx.getMethodType(tarref)
 			mtype, ok := srcref.Type().MethodByName(mname)
 			if ok == true {
 				methodVal := srcref.MethodByName(mname)
