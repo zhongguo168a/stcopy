@@ -169,10 +169,15 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 					}()
 
 					if mtype.Type.NumOut() > 0 {
-						if results[0].IsNil() == false {
-							err = results[0].Interface().(error)
-							return
+						if tarref.Kind() == reflect.Ptr {
+							if results[0].IsNil() == false {
+								err = results[0].Interface().(error)
+								return
+							}
+						} else {
+							tarref.Set(results[0])
 						}
+
 					}
 
 					return

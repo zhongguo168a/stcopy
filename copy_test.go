@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
 	"testing"
 )
 
@@ -35,8 +36,9 @@ type ClassArray struct {
 }
 
 type ClassConvert struct {
-	Convert *Convert
-	Enum    TestEnum
+	Convert       *Convert
+	ConvertDefine ConvertDefine
+	Enum          TestEnum
 }
 
 type ClassConvert2 struct {
@@ -71,6 +73,21 @@ func (s *Convert) FromString(ctx *Context, val string) (err error) {
 	if err != nil {
 		return
 	}
+	return
+}
+
+type ConvertDefine int
+
+func (s ConvertDefine) ToString(ctx *Context) (r string) {
+	return strconv.Itoa(int(s))
+}
+
+func (s ConvertDefine) FromString(ctx *Context, val string) (r ConvertDefine, err error) {
+	t, err := strconv.Atoi(val)
+	if err != nil {
+		return
+	}
+	r = ConvertDefine(t)
 	return
 }
 
@@ -214,6 +231,10 @@ func TestCopyStructFromMapConvert(t *testing.T) {
 		//&map[string]interface{}{"Enum": 100}, // source
 		//&ClassConvert{Enum: TestEnum(99)},    // target
 		//&ClassConvert{Enum: TestEnum(100)},   // result
+		// next
+		&map[string]interface{}{"ConvertDefine": "100"},                      // source
+		&ClassConvert{ConvertDefine: ConvertDefine(99), Enum: TestEnum(99)},  // target
+		&ClassConvert{ConvertDefine: ConvertDefine(100), Enum: TestEnum(99)}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
