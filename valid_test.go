@@ -30,12 +30,11 @@ func (a *ValidA) Valid() (err error) {
 
 type TypeB int
 
-func (a TypeB) Valid() (err error) {
+func (a TypeB) Valid() bool {
 	if a > 0 {
-		err = errors.New("out of range")
-		return
+		return false
 	}
-	return
+	return true
 }
 
 func TestContext_Valid(t *testing.T) {
@@ -49,7 +48,7 @@ func TestContext_Valid(t *testing.T) {
 		//&ValidClass{ArrayB: []TypeB{TypeB(0), TypeB(100)}},
 		//"ArrayB: at 1: out of range",
 		&ValidClass{MapB: map[string]TypeB{"1": TypeB(0), "2": TypeB(100)}},
-		"MapB: at 2: out of range",
+		"MapB: at 2: not true",
 	}
 
 	for i := 0; i < len(sources); i += 2 {

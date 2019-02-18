@@ -49,10 +49,16 @@ func (ctx *Context) valid(source Value, provideTyp reflect.Type, depth int) (err
 		}()
 		// 包含error
 		if mtype.Type.NumOut() > 0 {
-			if results[0].IsNil() == false {
-				err = results[0].Interface().(error)
-				return
+			if results[0].Type().Kind() == reflect.Bool {
+				if results[0].Bool() == false {
+					err = errors.New("not true")
+				}
+			} else { // error
+				if results[0].IsNil() == false {
+					err = results[0].Interface().(error)
+				}
 			}
+			return
 		}
 	}
 	//fmt.Println("last target=", tarref, tarref.Type(), tarref.CanSet())
