@@ -1,8 +1,9 @@
 package stcopy
 
 import (
-	"github.com/pkg/errors"
+	"errors"
 	"reflect"
+	"sort"
 )
 
 func NewTypeMap(types []reflect.Type) (r TypeMap) {
@@ -14,6 +15,24 @@ func NewTypeMap(types []reflect.Type) (r TypeMap) {
 }
 
 type TypeMap map[string]reflect.Type
+
+func (m TypeMap) GetKeys() (keys []string) {
+	for key := range m {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return
+}
+
+func (m TypeMap) AddList(list []reflect.Type) {
+	for _, val := range list {
+		m.Add(val)
+	}
+}
+
+func (m TypeMap) Add(val reflect.Type) {
+	m[val.Name()] = val
+}
 
 type Value reflect.Value
 
@@ -51,6 +70,24 @@ func (val Value) updateMapStructTypeBy(source Value) (err error) {
 	return
 }
 
+// 为map对象添加结构类型 {"_ptr":boolean}
+func (val Value) updateMapStructPtrBy(source Value) (err error) {
+	indirect := source.Indirect()
+	if indirect.Upper().Kind() != reflect.Struct {
+		return
+	}
+	ref := val.Indirect()
+	if ref.Upper().Kind() != reflect.Map {
+		err = errors.New("not map")
+		return
+	}
+
+	if source.Upper().Kind() == reflect.Ptr {
+		ref.Upper().SetMapIndex(reflect.ValueOf("_ptr"), reflect.ValueOf(true))
+	}
+	return
+}
+
 func (val Value) GetTypeString() (y string) {
 	if val.Upper().IsValid() {
 		y = val.Upper().Type().String()
@@ -73,9 +110,9 @@ func (val Value) convertToMapValue() (r Value) {
 	var a reflect.Value
 	switch valref.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		a = reflect.ValueOf(int(valref.Int()))
+		a = reflect.ValueOf(float64(valref.Int()))
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		a = reflect.ValueOf(valref.Uint())
+		a = reflect.ValueOf(float64(valref.Uint()))
 	case reflect.Float32, reflect.Float64:
 		a = reflect.ValueOf(valref.Float())
 	case reflect.Bool:
@@ -90,13 +127,13 @@ func (val Value) convertToMapValue() (r Value) {
 }
 
 var (
-	TypeUtiler = TypeUtil(0)
+	TypeUtiler = typeUtil(0)
 )
 
-type TypeUtil int
+type typeUtil int
 
 // 获取正确的反射对象，如果nil，创建新的
-func (*TypeUtil) UnfoldType(typ reflect.Type) reflect.Type {
+func (*typeUtil) UnfoldType(typ reflect.Type) reflect.Type {
 	switch typ.Kind() {
 	case reflect.Struct:
 	case reflect.Ptr:
@@ -108,7 +145,7 @@ func (*TypeUtil) UnfoldType(typ reflect.Type) reflect.Type {
 }
 
 // 获取
-func (sv *TypeUtil) GetFieldRecursion(typ reflect.Type) (r []*reflect.StructField) {
+func (sv *typeUtil) GetFieldRecursion(typ reflect.Type) (r []*reflect.StructField) {
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
 		switch field.Type.Kind() {

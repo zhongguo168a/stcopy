@@ -1,10 +1,13 @@
 package stcopy
 
 import (
-	"github.com/pkg/errors"
+	"encoding/base64"
+	"errors"
+	"fmt"
 	"github.com/zhongguo168a/gocodes/utils/stringutil"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 func isHard(k reflect.Kind) bool {
@@ -42,8 +45,9 @@ func (ctx *Context) To(val interface{}) (err error) {
 
 	if ctx.valueA.Indirect().Upper().Kind() == reflect.Map && ctx.valueB.Indirect().Upper().Kind() == reflect.Map {
 		if ctx.provideTyp == nil {
-			err = errors.New("must set provide type")
-			return
+			ctx.provideTyp = ctx.valueA.Upper().Type()
+			//err = errors.New("must set provide type")
+			//return
 		}
 	} else {
 		provideTyp, geterr := ctx.getProvideTyp(ctx.valueA, ctx.valueB)
@@ -71,8 +75,9 @@ func (ctx *Context) From(val interface{}) (err error) {
 	ctx.direction = AfromB
 	if ctx.valueA.Indirect().Upper().Kind() == reflect.Map && ctx.valueB.Indirect().Upper().Kind() == reflect.Map {
 		if ctx.provideTyp == nil {
-			err = errors.New("must set provide type")
-			return
+			ctx.provideTyp = ctx.valueA.Upper().Type()
+			//err = errors.New("must set provide type")
+			//return
 		}
 	} else {
 		ctx.provideTyp, err = ctx.getProvideTyp(ctx.valueB, ctx.valueA)
@@ -92,11 +97,31 @@ func (ctx *Context) From(val interface{}) (err error) {
 }
 
 func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth int) (result Value, err error) {
+	prefix := strings.Repeat("----", depth)
+
 	srcref := source.Upper()
 	tarref := target.Upper()
-	//fmt.Println("\n||| to", "provide=", provideTyp)
-	//fmt.Println("srctyp=", srcref.Type(), "src=", srcref)
-	//fmt.Println("tartyp=", target.GetTypeString(), "tar=", tarref, ",  canset=", tarref.CanSet())
+
+	// 所有指针类型的map结构都转化成非指针类型
+	//if provideTyp.Kind() == reflect.Ptr {
+	//	provideTypElem := provideTyp.Elem()
+	//	if provideTypElem.Kind() == reflect.Map {
+	//		fmt.Println(prefix+"copy convert: provide typ: ", provideTyp, "->", provideTypElem)
+	//		provideTyp = provideTypElem
+	//		srcref = srcref.Elem()
+	//	}
+	//}
+	//
+	fmt.Println(prefix+"copy:", "provide typ=", provideTyp, "kind=", provideTyp.Kind())
+	fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref)
+	fmt.Println(prefix+"copy: tartyp=", target.GetTypeString(), "tar=", tarref, "nil=", ",  canset=", tarref.CanSet(), func() (x string) {
+		if isHard(tarref.Kind()) && tarref.IsNil() {
+			x = "isnil=true"
+		} else {
+			x = "isnil=false"
+		}
+		return
+	}())
 
 	// 源是否空
 	if srcref.IsValid() == false {
@@ -107,14 +132,14 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 	}
 
 	// 接口处理
-	if provideTyp.Kind() != reflect.Interface {
-		if srcref.Kind() == reflect.Interface {
-			srcref = srcref.Elem()
-		}
-		if tarref.Kind() == reflect.Interface {
-			tarref = tarref.Elem()
-		}
-	}
+	//if provideTyp.Kind() != reflect.Interface {
+	//	if srcref.Kind() == reflect.Interface {
+	//		srcref = srcref.Elem()
+	//	}
+	//	if tarref.Kind() == reflect.Interface {
+	//		tarref = tarref.Elem()
+	//	}
+	//}
 
 	// 如果源与目标的类型不一致
 	// 0层不可以convert, 请直接调用Convert函数处理
@@ -179,7 +204,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 						}
 
 					}
-
+					result = Value(results[0])
 					return
 				}
 
@@ -192,13 +217,20 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 		if tarref.IsValid() == false {
 			return true
 		}
-		switch provideTyp.Kind() {
+		switch tarref.Kind() {
+		case reflect.Array, reflect.Slice:
+			x = tarref.IsNil()
 		case reflect.Struct:
 
 		case reflect.Map, reflect.Ptr:
 			x = tarref.IsNil()
 		case reflect.Interface:
-			x = tarref.IsNil() || tarref.CanSet() == false
+			if isHard(tarref.Elem().Kind()) {
+				x = tarref.IsNil()
+			} else {
+				x = tarref.IsNil() || tarref.CanSet() == false
+			}
+
 		default:
 			x = tarref.CanSet() == false
 		}
@@ -208,30 +240,111 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 
 	if checkNewTarget {
 		// 创建新的值
+		unfold := TypeUtiler.UnfoldType(provideTyp)
+		switch provideTyp.Kind() {
+		case reflect.Array, reflect.Slice:
+			tarref = func() (x reflect.Value) {
+				if isHard(unfold.Elem().Kind()) {
+					slice := make([]interface{}, srcref.Len(), srcref.Cap())
+					x = reflect.ValueOf(slice)
+				} else {
+					if srcref.Kind() == reflect.String {
+						x = reflect.MakeSlice(unfold, 0, 0)
+					} else {
+						x = reflect.MakeSlice(unfold, srcref.Len(), srcref.Cap())
+					}
 
-		switch ctx.targetType {
-		case TargetMap:
-			unfold := TypeUtiler.UnfoldType(provideTyp)
-			switch unfold.Kind() {
-			case reflect.Array, reflect.Slice:
-				slice := make([]interface{}, srcref.Len(), srcref.Cap())
-				tarref = reflect.ValueOf(&slice)
-			case reflect.Map:
-				tarref = reflect.ValueOf(&map[string]interface{}{})
-			case reflect.Struct:
-				tarref = reflect.ValueOf(&map[string]interface{}{})
-			default:
-				tarref = reflect.New(provideTyp)
+				}
+
+				return
+			}()
+		case reflect.Map:
+			tarref, err = func() (x reflect.Value, typeerr error) {
+				src := srcref.Interface().(map[string]interface{})
+
+				typeerr = func() (x error) {
+					istr, srcok := src["_type"]
+					if srcok == true {
+						str := istr.(string)
+						_, typok := ctx.typeMap[str]
+						if typok == false {
+							x = errors.New("type not found: " + str)
+							return
+						}
+					}
+
+					return
+				}()
+
+				if typeerr != nil {
+					return
+				}
+
+				sttype, ok := func() (x reflect.Type, b bool) {
+					istr, srcok := src["_type"]
+					if srcok == true {
+						str := istr.(string)
+						sttype, typok := ctx.typeMap[str]
+						if typok == true {
+							x = sttype
+							b = true
+							return
+						}
+					}
+					return
+				}()
+
+				if ok == true {
+					isPtr := func() (x bool) {
+						istr, ok := src["_ptr"]
+						if ok == false {
+							return false
+						}
+						x = istr.(bool)
+						return
+					}()
+
+					x = reflect.New(sttype)
+					if isPtr {
+						srcany := srcref.Interface().(map[string]interface{})
+						srcref = reflect.ValueOf(&srcany)
+						provideTyp = x.Type()
+					} else {
+						provideTyp = sttype
+					}
+					return
+				}
+				x = reflect.MakeMap(provideTyp)
+				return
+			}()
+			if err != nil {
+				return
 			}
 
+		case reflect.Struct:
+			if ctx.targetType == TargetMap {
+				tarref = reflect.ValueOf(map[string]interface{}{})
+				srcref = reflect.Indirect(srcref)
+				provideTyp = unfoldType(provideTyp)
+			} else {
+				tarref = reflect.ValueOf(&map[string]interface{}{})
+			}
+		default:
+			tarref = reflect.New(provideTyp)
 			if provideTyp.Kind() != reflect.Ptr {
 				tarref = tarref.Elem()
 			}
-		case TargetStruct:
-			tarref = reflect.New(provideTyp).Elem()
 		}
 	}
-	//fmt.Println("last target=", tarref, tarref.Type(), tarref.CanSet())
+
+	fmt.Println(prefix+"tartyp=", tarref.Type(), "tar=", tarref, ",  canset=", tarref.CanSet(), func() (x string) {
+		if isHard(tarref.Kind()) && tarref.IsNil() {
+			x = "isnil=true"
+		} else {
+			x = "isnil=false"
+		}
+		return
+	}(), "<last>")
 
 	var retval Value
 	switch provideTyp.Kind() {
@@ -239,16 +352,25 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 		if srcref.Len() == 0 {
 			return
 		}
-		for i := 0; i < srcref.Len(); i++ {
-			srcitem := srcref.Index(i)
-			taritem := tarref.Index(i)
-			retval, copyerr := ctx.copy(Value(srcitem), Value(taritem), provideTyp.Elem(), depth+1)
-			if copyerr != nil {
-				err = copyerr
-				return
+
+		if isHard(provideTyp.Elem().Kind()) {
+			for i := 0; i < srcref.Len(); i++ {
+				srcitem := srcref.Index(i)
+				taritem := tarref.Index(i)
+				retval, copyerr := ctx.copy(Value(srcitem), Value(taritem), provideTyp.Elem(), depth+1)
+				if copyerr != nil {
+					err = copyerr
+					return
+				}
+				tarref.Index(i).Set(retval.Upper())
 			}
-			tarref.Index(i).Set(retval.Upper())
+		} else if provideTyp.Elem().Kind() == reflect.Uint8 && srcref.Type().Kind() == reflect.String {
+			b, _ := base64.StdEncoding.DecodeString(srcref.String())
+			tarref = reflect.ValueOf(b)
+		} else {
+			reflect.Copy(tarref, srcref)
 		}
+
 	case reflect.Interface:
 		retval, err = ctx.copy(Value(srcref.Elem()), Value(tarref.Elem()), srcref.Elem().Type(), depth+1)
 		if err != nil {
@@ -258,7 +380,13 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 		if err != nil {
 			return
 		}
-		tarref.Set(retval.Upper())
+		err = retval.updateMapStructPtrBy(Value(srcref.Elem()))
+		if err != nil {
+			return
+		}
+		if tarref.CanSet() {
+			tarref.Set(retval.Upper())
+		}
 	case reflect.Ptr:
 		retval, err = ctx.copy(Value(srcref.Elem()), Value(tarref.Elem()), provideTyp.Elem(), depth+1)
 		if err != nil {
@@ -276,7 +404,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 					continue
 				}
 			}
-			//fmt.Println(">>> copy struct field: ", field.Name, ", fieldtyp=", field.Type)
+			fmt.Println(prefix+"struct: field=", field.Name, ", fieldtyp=", field.Type)
 			// 获取目标值
 			tarfield := getFieldVal(tarref, field)
 			retval, err = ctx.copy(Value(srcfield), Value(tarfield), field.Type, depth+1)
@@ -292,41 +420,43 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 					tarfield.Set(retval.Upper())
 				}
 			default:
-				panic("not support")
+				panic("not support in struct")
 			}
 		}
 	case reflect.Map:
-		for _, k := range srcref.MapKeys() {
 
-			val1 := srcref.MapIndex(k)
-			if val1.IsValid() == false {
+		for _, keySrc := range srcref.MapKeys() {
+			fmt.Println(prefix+"map: before copy key source: type=", keySrc.Type(), ", val=", keySrc.Interface())
+			keyTar := reflect.New(provideTyp.Key()).Elem()
+			keyTarVal, copyerr := ctx.copy(Value(keySrc), Value(keyTar), provideTyp.Key(), depth+1)
+			if copyerr != nil {
+				err = copyerr
+				return
+			}
+			fmt.Println(prefix+"map: after copy key target: type=", keyTarVal.Upper().Type(), ", val=", keyTarVal.Upper().Interface())
+
+			valTar := tarref.MapIndex(keyTar)
+			valSrc := srcref.MapIndex(keySrc)
+			if valSrc.IsValid() == false {
 				continue
 			}
-			val2 := tarref.MapIndex(k)
 
-			//fmt.Println("||| copy map key: ", k, ", fieldtyp=", val1.Type())
-			//fmt.Println("src=", val1, ", typ=", val2)
-
-			retval, _ := ctx.copy(Value(val1), Value(val2), val1.Type(), depth+1)
-			key := func() (x reflect.Value) {
-				if k.Type() != tarref.Type().Key() {
-					switch tarref.Type().Key().Kind() {
-					case reflect.String:
-						x = reflect.ValueOf(Convert2String(k.Interface()))
-					case reflect.Int:
-						x = reflect.ValueOf(Convert2Int(k.Interface()))
-
-					}
-				} else {
-					x = k
-				}
+			fmt.Println(prefix+"map: before copy value source : type=", valSrc.Type(), ", val=", valSrc.Interface())
+			if valTar.IsValid() && valTar.IsNil() == false {
+				fmt.Println(prefix+"before copy value target: type=", valTar.Type(), ", val=", valTar.Interface())
+			}
+			varTarVal, copyerr := ctx.copy(Value(valSrc), Value(valTar), provideTyp.Elem(), depth+1)
+			if copyerr != nil {
+				err = copyerr
 				return
-			}()
-			tarref.SetMapIndex(key, retval.Upper())
+			}
+			fmt.Println(prefix+"map: after copy value target: type=", varTarVal.Upper().Type(), ", val=", varTarVal.Upper().Interface())
+			tarref.SetMapIndex(keyTarVal.Upper(), varTarVal.Upper())
+			fmt.Println(prefix+"map: after copy value map: ", tarref.Interface())
 		}
 
 	case reflect.Func:
-		panic("not suppor")
+		panic("function not support")
 	default:
 		tarref.Set(func() (x reflect.Value) {
 			// 规定的类型跟源类型不一致的情况
@@ -335,7 +465,13 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 				case reflect.Interface:
 					x = srcref.Elem().Convert(provideTyp)
 				default:
-					x = srcref.Convert(provideTyp)
+					if provideTyp.Kind().String() == provideTyp.String() {
+						x = srcref.Convert(provideTyp)
+					} else {
+						// 枚举
+						err = errors.New("enum convert function not found")
+						return
+					}
 				}
 			} else {
 				x = srcref
