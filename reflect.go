@@ -6,6 +6,11 @@ import (
 	"sort"
 )
 
+var (
+	bytesTyp  = reflect.TypeOf([]byte{})
+	stringTyp = reflect.TypeOf("")
+)
+
 func NewTypeMap(types []reflect.Type) (r TypeMap) {
 	r = TypeMap{}
 	for _, val := range types {
@@ -76,6 +81,19 @@ func (val Value) updateMapStructPtrBy(source Value) (err error) {
 	if indirect.Upper().Kind() != reflect.Struct {
 		return
 	}
+	ref := val.Indirect()
+	if ref.Upper().Kind() != reflect.Map {
+		err = errors.New("not map")
+		return
+	}
+
+	if source.Upper().Kind() == reflect.Ptr {
+		ref.Upper().SetMapIndex(reflect.ValueOf("_ptr"), reflect.ValueOf(true))
+	}
+	return
+}
+
+func (val Value) updateMapPtrBy(source Value) (err error) {
 	ref := val.Indirect()
 	if ref.Upper().Kind() != reflect.Map {
 		err = errors.New("not map")

@@ -59,12 +59,13 @@ const (
 	AfromB
 )
 
-// 目标的类型
-type TargetType int
+// 转换模式
+type ConvertType int
 
 const (
-	TargetMap TargetType = iota
-	TargetStruct
+	AnyToJsonMap ConvertType = iota
+	JsonMapToStruct
+	StructToStruct
 )
 
 // 数据源的上下文
@@ -75,8 +76,8 @@ type Context struct {
 	valueB Value
 	// copy方向
 	direction Direction
-	// 目标的类型
-	targetType TargetType
+	// 转换类型
+	convertType ConvertType
 	// 规定的类型
 	provideTyp reflect.Type
 	// 自定义的参数, 传递给转化函数使用

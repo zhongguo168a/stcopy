@@ -27,11 +27,18 @@ func getFieldVal(val reflect.Value, field *reflect.StructField) (x reflect.Value
 	return
 }
 
-func getTargetMode(val Value) TargetType {
-	if val.Upper().Kind() == reflect.Map {
-		return TargetMap
+func getTargetMode(source, target Value) (r ConvertType) {
+	if target.Upper().Kind() == reflect.Map {
+		return AnyToJsonMap
 	}
-	return TargetStruct
+	if source.Upper().Kind() == reflect.Map && target.Upper().Kind() == reflect.Struct {
+		return JsonMapToStruct
+	}
+	if source.Upper().Kind() == reflect.Struct && target.Upper().Kind() == reflect.Struct {
+		return StructToStruct
+	}
+	panic("not support ConvertType")
+	return
 }
 
 func (ctx *Context) To(val interface{}) (err error) {
@@ -56,9 +63,9 @@ func (ctx *Context) To(val interface{}) (err error) {
 		}
 		ctx.provideTyp = provideTyp
 	}
-	ctx.targetType = getTargetMode(ctx.valueB.Indirect())
+	ctx.convertType = getTargetMode(ctx.valueA, ctx.valueB.Indirect())
 
-	_, err = ctx.copy(ctx.valueA, ctx.valueB, ctx.provideTyp, 0)
+	_, err = ctx.copy(ctx.valueA, ctx.valueB, ctx.provideTyp, false, 0)
 	if err != nil {
 		return
 	}
@@ -86,9 +93,9 @@ func (ctx *Context) From(val interface{}) (err error) {
 			return
 		}
 	}
-	ctx.targetType = getTargetMode(ctx.valueA.Indirect())
+	ctx.convertType = getTargetMode(ctx.valueB.Indirect(), ctx.valueA.Indirect())
 
-	_, err = ctx.copy(ctx.valueB, ctx.valueA, ctx.provideTyp, 0)
+	_, err = ctx.copy(ctx.valueB, ctx.valueA, ctx.provideTyp, false, 0)
 	if err != nil {
 		return
 	}
@@ -96,7 +103,12 @@ func (ctx *Context) From(val interface{}) (err error) {
 	return
 }
 
-func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth int) (result Value, err error) {
+func (ctx *Context) getMethodType(val reflect.Value) (r string) {
+	r = stringutil.UpperFirst(val.Kind().String())
+	return
+}
+
+func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterface bool, depth int) (result Value, err error) {
 	prefix := strings.Repeat("----", depth)
 
 	srcref := source.Upper()
@@ -112,7 +124,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 	//	}
 	//}
 	//
-	fmt.Println(prefix+"copy:", "provide typ=", provideTyp, "kind=", provideTyp.Kind())
+	fmt.Println(prefix+"> copy:", "provide typ=", provideTyp, "kind=", provideTyp.Kind())
 	fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref)
 	fmt.Println(prefix+"copy: tartyp=", target.GetTypeString(), "tar=", tarref, "nil=", ",  canset=", tarref.CanSet(), func() (x string) {
 		if isHard(tarref.Kind()) && tarref.IsNil() {
@@ -241,93 +253,64 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 	if checkNewTarget {
 		// 创建新的值
 		unfold := TypeUtiler.UnfoldType(provideTyp)
-		switch provideTyp.Kind() {
+		switch unfold.Kind() {
 		case reflect.Array, reflect.Slice:
 			tarref = func() (x reflect.Value) {
-				if isHard(unfold.Elem().Kind()) {
-					slice := make([]interface{}, srcref.Len(), srcref.Cap())
-					x = reflect.ValueOf(slice)
-				} else {
-					if srcref.Kind() == reflect.String {
-						x = reflect.MakeSlice(unfold, 0, 0)
+				if ctx.convertType == AnyToJsonMap {
+					if provideTyp == bytesTyp {
+						x = reflect.New(stringTyp).Elem()
 					} else {
-						x = reflect.MakeSlice(unfold, srcref.Len(), srcref.Cap())
+						slice := make([]interface{}, srcref.Len(), srcref.Cap())
+						x = reflect.ValueOf(slice)
 					}
-
+				} else {
+					x = reflect.MakeSlice(provideTyp, srcref.Len(), srcref.Cap())
 				}
+				//if isHard(provideTyp.Elem().Kind()) {
+				//	slice := make([]interface{}, srcref.Len(), srcref.Cap())
+				//	x = reflect.ValueOf(slice)
+				//} else {
+				//	if srcref.Kind() == reflect.String {
+				//		x = reflect.MakeSlice(provideTyp, 0, 0)
+				//	} else {
+				//		x = reflect.MakeSlice(provideTyp, srcref.Len(), srcref.Cap())
+				//	}
+				//}
 
 				return
 			}()
 		case reflect.Map:
-			tarref, err = func() (x reflect.Value, typeerr error) {
-				src := srcref.Interface().(map[string]interface{})
-
-				typeerr = func() (x error) {
-					istr, srcok := src["_type"]
-					if srcok == true {
-						str := istr.(string)
-						_, typok := ctx.typeMap[str]
-						if typok == false {
-							x = errors.New("type not found: " + str)
-							return
-						}
-					}
-
-					return
-				}()
-
-				if typeerr != nil {
-					return
+			switch ctx.convertType {
+			case AnyToJsonMap:
+				if provideTyp.Kind() == reflect.Ptr {
+					tarref = reflect.ValueOf(&map[string]interface{}{})
+				} else {
+					tarref = reflect.ValueOf(map[string]interface{}{})
 				}
-
-				sttype, ok := func() (x reflect.Type, b bool) {
-					istr, srcok := src["_type"]
-					if srcok == true {
-						str := istr.(string)
-						sttype, typok := ctx.typeMap[str]
-						if typok == true {
-							x = sttype
-							b = true
-							return
-						}
-					}
-					return
-				}()
-
-				if ok == true {
-					isPtr := func() (x bool) {
-						istr, ok := src["_ptr"]
-						if ok == false {
-							return false
-						}
-						x = istr.(bool)
-						return
-					}()
-
-					x = reflect.New(sttype)
-					if isPtr {
-						srcany := srcref.Interface().(map[string]interface{})
-						srcref = reflect.ValueOf(&srcany)
-						provideTyp = x.Type()
+			case StructToStruct:
+				tarref = reflect.New(provideTyp).Elem()
+			case JsonMapToStruct:
+				tarref = func() (y reflect.Value) {
+					if provideTyp.Kind() == reflect.Ptr {
+						y = reflect.ValueOf(&map[string]interface{}{})
 					} else {
-						provideTyp = sttype
+						y = reflect.ValueOf(map[string]interface{}{})
 					}
 					return
-				}
-				x = reflect.MakeMap(provideTyp)
-				return
-			}()
-			if err != nil {
-				return
+				}()
 			}
-
 		case reflect.Struct:
-			if ctx.targetType == TargetMap {
-				tarref = reflect.ValueOf(map[string]interface{}{})
-				srcref = reflect.Indirect(srcref)
-				provideTyp = unfoldType(provideTyp)
+			if ctx.convertType == AnyToJsonMap {
+				if provideTyp.Kind() == reflect.Ptr {
+					tarref = reflect.ValueOf(&map[string]interface{}{})
+				} else {
+					tarref = reflect.ValueOf(map[string]interface{}{})
+				}
 			} else {
-				tarref = reflect.ValueOf(&map[string]interface{}{})
+				tarref = reflect.New(unfold)
+				if provideTyp.Kind() != reflect.Ptr {
+					tarref = tarref.Elem()
+				}
 			}
 		default:
 			tarref = reflect.New(provideTyp)
@@ -335,9 +318,11 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 				tarref = tarref.Elem()
 			}
 		}
+
+		target = Value(tarref)
 	}
 
-	fmt.Println(prefix+"tartyp=", tarref.Type(), "tar=", tarref, ",  canset=", tarref.CanSet(), func() (x string) {
+	fmt.Println(prefix+"copy: tartyp=", tarref.Type(), "tar=", tarref, ",  canset=", tarref.CanSet(), func() (x string) {
 		if isHard(tarref.Kind()) && tarref.IsNil() {
 			x = "isnil=true"
 		} else {
@@ -353,48 +338,199 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 			return
 		}
 
-		if isHard(provideTyp.Elem().Kind()) {
-			for i := 0; i < srcref.Len(); i++ {
-				srcitem := srcref.Index(i)
-				taritem := tarref.Index(i)
-				retval, copyerr := ctx.copy(Value(srcitem), Value(taritem), provideTyp.Elem(), depth+1)
-				if copyerr != nil {
-					err = copyerr
+		if ctx.convertType == AnyToJsonMap {
+			if provideTyp == bytesTyp {
+				tarref = reflect.ValueOf(base64.StdEncoding.EncodeToString(srcref.Interface().([]byte)))
+			} else {
+				for i := 0; i < srcref.Len(); i++ {
+					srcitem := srcref.Index(i)
+					taritem := tarref.Index(i)
+					retval, copyerr := ctx.copy(Value(srcitem), Value(taritem), provideTyp.Elem(), inInterface, depth+1)
+					if copyerr != nil {
+						err = copyerr
+						return
+					}
+					//err = retval.updateMapStructTypeBy(Value(srcitem))
+					//if err != nil {
+					//	return
+					//}
+					if retval.Indirect().Upper().Kind() == reflect.Map {
+						err = retval.updateMapStructTypeBy(Value(srcitem))
+						if err != nil {
+							return
+						}
+
+						err = retval.updateMapPtrBy(Value(srcitem))
+						if err != nil {
+							return
+						}
+					}
+
+					tarref.Index(i).Set(retval.Upper())
+				}
+			}
+		} else {
+			if isHard(provideTyp.Elem().Kind()) {
+				for i := 0; i < srcref.Len(); i++ {
+					srcitem := srcref.Index(i)
+					taritem := tarref.Index(i)
+					retval, copyerr := ctx.copy(Value(srcitem), Value(taritem), provideTyp.Elem(), depth+1)
+					if copyerr != nil {
+						err = copyerr
+						return
+					}
+					tarref.Index(i).Set(retval.Upper())
+				}
+			} else if provideTyp.Elem().Kind() == reflect.Uint8 && srcref.Type().Kind() == reflect.String {
+				b, _ := base64.StdEncoding.DecodeString(srcref.String())
+				tarref = reflect.ValueOf(b)
+			} else {
+				reflect.Copy(tarref, srcref)
+			}
+		}
+	case reflect.Interface:
+		switch ctx.convertType {
+		case AnyToJsonMap:
+			retval, err = ctx.copy(Value(srcref.Elem()), Value(tarref.Elem()), srcref.Elem().Type(), depth+1)
+			if err != nil {
+				return
+			}
+			switch retval.Indirect().Upper().Kind() {
+			case reflect.Slice, reflect.Array:
+				srcunfold := source.unfoldInterface().Indirect()
+				for i := 0; i < srcunfold.Upper().Len(); i++ {
+					srcitem := Value(srcunfold.Upper().Index(i))
+					taritem := Value(retval.Indirect().Upper().Index(i))
+
+					if taritem.Indirect().Upper().Kind() == reflect.Map {
+						err = taritem.updateMapStructTypeBy(srcitem.unfoldInterface())
+						if err != nil {
+							return
+						}
+
+						err = taritem.updateMapPtrBy(srcitem.unfoldInterface())
+						if err != nil {
+							return
+						}
+					}
+				}
+			case reflect.Map:
+				err = retval.updateMapStructTypeBy(source.unfoldInterface())
+				if err != nil {
 					return
 				}
-				tarref.Index(i).Set(retval.Upper())
+
+				err = retval.updateMapPtrBy(source.unfoldInterface())
+				if err != nil {
+					return
+				}
 			}
-		} else if provideTyp.Elem().Kind() == reflect.Uint8 && srcref.Type().Kind() == reflect.String {
-			b, _ := base64.StdEncoding.DecodeString(srcref.String())
-			tarref = reflect.ValueOf(b)
-		} else {
-			reflect.Copy(tarref, srcref)
+		case JsonMapToStruct:
+			provideTyp = func() (x reflect.Type) {
+				srcunfold := source.unfoldInterface()
+
+				checkMap := func() (y bool) {
+					switch srcunfold.Upper().Kind() {
+					case reflect.Slice, reflect.Array:
+
+						if srcunfold.Upper().Type().Elem().Kind() == reflect.Map {
+							y = true
+							return
+						}
+					case reflect.Map:
+						y = true
+						return
+					}
+					return
+				}()
+
+				if checkMap {
+					src := srcref.Interface().(map[string]interface{})
+					// 处理类型
+					sttype := func() (y reflect.Type) {
+						istr, srcok := src["_type"]
+						if srcok == false {
+							return
+						}
+						delete(src, "_type")
+
+						str := istr.(string)
+						t, typok := ctx.typeMap[str]
+						if typok == false {
+							return
+						}
+
+						y = t
+						return
+					}()
+					// 处理指针
+					isPtr := func() (x bool) {
+						istr, ok := src["_ptr"]
+						if ok == false {
+							return false
+						}
+						delete(src, "_ptr")
+						x = istr.(bool)
+						return
+					}()
+
+					//
+					if sttype == nil {
+						x = srcunfold.Upper().Type()
+					} else {
+						x = sttype
+					}
+					if isPtr {
+						x = reflect.PtrTo(x)
+					}
+
+					switch srcunfold.Upper().Kind() {
+					case reflect.Slice, reflect.Array:
+						x = reflect.SliceOf(x)
+					}
+				} else {
+					x = srcunfold.Upper().Type()
+				}
+
+				return
+			}()
+
+			retval, err = ctx.copy(Value(srcref.Elem()), Value(tarref.Elem()), provideTyp, inInterface, depth+1)
+			if err != nil {
+				return
+			}
 		}
 
-	case reflect.Interface:
-		retval, err = ctx.copy(Value(srcref.Elem()), Value(tarref.Elem()), srcref.Elem().Type(), depth+1)
-		if err != nil {
-			return
-		}
-		err = retval.updateMapStructTypeBy(Value(srcref.Elem()))
-		if err != nil {
-			return
-		}
-		err = retval.updateMapStructPtrBy(Value(srcref.Elem()))
-		if err != nil {
-			return
-		}
+		//err = retval.updateMapStructPtrBy(Value(srcref.Elem()))
+		//if err != nil {
+		//	return
+		//}
 		if tarref.CanSet() {
 			tarref.Set(retval.Upper())
 		}
 	case reflect.Ptr:
-		retval, err = ctx.copy(Value(srcref.Elem()), Value(tarref.Elem()), provideTyp.Elem(), depth+1)
+		retval, err = ctx.copy(func() (x Value) {
+			if srcref.Kind() == reflect.Ptr {
+				x = Value(srcref.Elem())
+			} else {
+				x = Value(srcref)
+			}
+			return
+		}(), Value(tarref.Elem()), provideTyp.Elem(), inInterface, depth+1)
 		if err != nil {
 			return
 		}
-		if tarref.CanSet() {
-			tarref.Set(retval.Upper().Addr())
+		tarref.Elem().Set(retval.Upper())
+
+		if ctx.convertType == AnyToJsonMap {
+			if tarref.Elem().Kind() == reflect.Map {
+				tarref = tarref.Elem()
+			}
 		}
+
+		//if tarref.CanSet() {
+		//	tarref.Set(retval.Upper().Addr())
+		//}
 	case reflect.Struct:
 		for _, field := range TypeUtiler.GetFieldRecursion(provideTyp) {
 			key := reflect.ValueOf(field.Name)
@@ -422,13 +558,14 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 			default:
 				panic("not support in struct")
 			}
+			fmt.Println(prefix+"struct[AF]: field=", field.Name, ", fieldval=", retval.Upper().Interface())
 		}
 	case reflect.Map:
 
 		for _, keySrc := range srcref.MapKeys() {
 			fmt.Println(prefix+"map: before copy key source: type=", keySrc.Type(), ", val=", keySrc.Interface())
 			keyTar := reflect.New(provideTyp.Key()).Elem()
-			keyTarVal, copyerr := ctx.copy(Value(keySrc), Value(keyTar), provideTyp.Key(), depth+1)
+			keyTarVal, copyerr := ctx.copy(Value(keySrc), Value(keyTar), provideTyp.Key(), inInterface, depth+1)
 			if copyerr != nil {
 				err = copyerr
 				return
@@ -445,7 +582,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 			if valTar.IsValid() && valTar.IsNil() == false {
 				fmt.Println(prefix+"before copy value target: type=", valTar.Type(), ", val=", valTar.Interface())
 			}
-			varTarVal, copyerr := ctx.copy(Value(valSrc), Value(valTar), provideTyp.Elem(), depth+1)
+			varTarVal, copyerr := ctx.copy(Value(valSrc), Value(valTar), provideTyp.Elem(), inInterface, depth+1)
 			if copyerr != nil {
 				err = copyerr
 				return
@@ -482,16 +619,11 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, depth in
 	}
 
 	result = Value(tarref)
-	if ctx.targetType == TargetMap {
+	if ctx.convertType == AnyToJsonMap {
 		result = result.convertToMapValue()
 	}
 
 	//fmt.Println("resut >", result.Upper())
-	return
-}
-
-func (ctx *Context) getMethodType(val reflect.Value) (r string) {
-	r = stringutil.UpperFirst(val.Kind().String())
 	return
 }
 

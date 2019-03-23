@@ -3,13 +3,14 @@ package stcopy
 import (
 	"code.zhongguo168a.top/zg168a/gocodes/utils/debugutil"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strconv"
 	"testing"
 )
 
 var types = NewTypeMap([]reflect.Type{
-	//reflect.TypeOf(Struct{}),
+	reflect.TypeOf(Struct{}),
 })
 
 type TestEnum int8
@@ -421,180 +422,87 @@ func TestCopyMapToMapMap(t *testing.T) {
 	}
 }
 
-func TestCopyStructAnyToMap(t *testing.T) {
-
+func TestCopyAnyToJsonMap(t *testing.T) {
 	sources := []interface{}{
-		//nil,
-		//nil,
-		//"test string type",
-		//"test string type",
-		//int(10),
-		//int64(10),
-		//int32(10),
-		//int64(10),
-		//uint(10),
-		//uint64(10),
-		//uint32(10),
-		//uint64(10),
-		//true,
-		//true,
-		//TestEnum(8),
-		//int64(8),
-		&ClassStruct{
-			Struct: nil,
-		},
-		map[string]interface{}{"_ptr": true, "_type": "ClassStruct"},
-		//&Struct{
-		//	String: "test struct",
-		//},
-		//&map[string]interface{}{"_type": "Struct", "String": "test struct", "Bool": false, "Int": int(0)},
-		//Struct{
-		//	String: "test struct",
-		//},
-		//map[string]interface{}{"_type": "Struct", "String": "test struct", "Int": int(0), "Bool": false},
-		//&Struct{
-		//	String: "test struct",
-		//},
-		//map[string]interface{}{"_ptr": true, "_type": "Struct", "String": "test struct", "Int": int(0), "Bool": false},
-		//[]string{"1", "2"},
-		//[]interface{}{"1", "2"},
-		//map[string]string{
-		//	"a": "test a",
-		//	"b": "test b",
-		//},
-		//map[string]interface{}{
-		//	"a": "test a",
-		//	"b": "test b",
-		//},
-		//map[string]*Struct{
-		//	"a": {String: "test map struct a"},
-		//	"b": {String: "test map struct b"},
-		//},
-		//map[string]interface{}{
-		//	"a": &map[string]interface{}{"String": "test map struct a", "Int": int(0), "Bool": false},
-		//	"b": &map[string]interface{}{"String": "test map struct b", "Int": int(0), "Bool": false},
-		//},
-	}
-
-	for i := 0; i < len(sources); i += 2 {
-		source := &ClassAny{
-			Any: sources[i],
-		}
-		target := &map[string]interface{}{}
-		err := New(source).WithTypeMap(types).To(target)
-		if err != nil {
-			panic(err)
-		}
-
-		debugutil.PrintJson("result=", sources[i+1])
-		debugutil.PrintJson("target=", (*target)["Any"])
-		if reflect.DeepEqual(sources[i+1], (*target)["Any"]) == false {
-			panic("")
-		}
-	}
-}
-
-func TestCopyStructAnyToMap2(t *testing.T) {
-
-	sources := []interface{}{
-		&ClassBase{
-			Int:    100,
-			String: "124",
-		},
-		map[string]interface{}{"_ptr": true, "_type": "ClassStruct"},
-	}
-
-	for i := 0; i < len(sources); i += 2 {
-		source := sources[i]
-		target := &map[string]interface{}{}
-		err := New(source).WithTypeMap(types).To(target)
-		if err != nil {
-			panic(err)
-		}
-
-		debugutil.PrintJson("result=", sources[i+1])
-		debugutil.PrintJson("target=", *target)
-		if reflect.DeepEqual(sources[i+1], *target) == false {
-			panic("")
-		}
-	}
-}
-
-func TestCopyMapToStructAny(t *testing.T) {
-
-	sources := []interface{}{
-		map[string]interface{}{"_ptr": true, "_type": "Struct", "String": "test struct", "Int": int(0), "Bool": false},
-		&Struct{
-			String: "test struct",
-		},
-	}
-
-	for i := 0; i < len(sources); i += 2 {
-		source := &map[string]interface{}{
-			"Any": sources[i],
-		}
-		target := &ClassAny{}
-		origin, _ := NewContext(target)
-		err := origin.WithTypeMap(types).From(source)
-		if err != nil {
-			panic(err)
-		}
-
-		debugutil.PrintJson("result=", sources[i+1])
-		debugutil.PrintJson("target=", target.Any)
-		if reflect.DeepEqual(sources[i+1], target.Any) == false {
-			panic("")
-		}
-	}
-}
-
-func TestCopyMapAnyToMap(t *testing.T) {
-	sources := []interface{}{
-		//"test string type",
-		//"test string type",
-		//int(10),
-		//float64(10),
-		//int32(10),
-		//float64(10),
-		//uint(10),
-		//float64(10),
-		//uint32(10),
-		//float64(10),
-		//true,
-		//true,
-		&map[string]interface{}{
-			"String": "test struct",
+		"test string type",
+		"test string type",
+		int(10),
+		float64(10),
+		int32(10),
+		float64(10),
+		uint(10),
+		float64(10),
+		// 5
+		uint32(10),
+		float64(10),
+		true,
+		true,
+		map[string]interface{}{"String": "test struct"},
+		map[string]interface{}{"String": "test struct"},
+		&map[string]interface{}{"String": "test struct"},
+		map[string]interface{}{"String": "test struct", "_ptr": true},
+		map[string]interface{}{
+			"a": "test a",
+			"b": "test b",
 		},
 		map[string]interface{}{
-			"_ptr":   true,
-			"String": "test struct",
+			"a": "test a",
+			"b": "test b",
 		},
-		//map[string]interface{}{
-		//	"String": "test struct",
-		//},
-		//map[string]interface{}{
-		//	"String": "test struct",
-		//},
-		//[]string{"1", "2"},
-		//[]interface{}{"1", "2"},
-		//map[string]interface{}{
-		//	"a": "test a",
-		//	"b": "test b",
-		//},
-		//map[string]interface{}{
-		//	"a": "test a",
-		//	"b": "test b",
-		//},
-		//map[string]interface{}{
-		//	"a": &map[string]interface{}{"String": "test map struct a"},
-		//	"b": &map[string]interface{}{"String": "test map struct b"},
-		//},
-		//map[string]interface{}{
-		//	"a": &map[string]interface{}{"String": "test map struct a"},
-		//	"b": &map[string]interface{}{"String": "test map struct b"},
-		//},
+		// 10
+		map[string]interface{}{
+			"a": &map[string]interface{}{"String": "test map struct a"},
+			"b": &map[string]interface{}{"String": "test map struct b"},
+		},
+		map[string]interface{}{
+			"a": map[string]interface{}{"String": "test map struct a", "_ptr": true},
+			"b": map[string]interface{}{"String": "test map struct b", "_ptr": true},
+		},
+		Struct{String: "test struct", Int: 100, Bool: true},
+		map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct"},
+		&Struct{String: "test struct", Int: 100, Bool: true},
+		map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct", "_ptr": true},
+		[]string{"1", "2"},
+		[]interface{}{"1", "2"},
+		[]byte{0, 1, 2},
+		"AAEC",
+		[]int{1, 2},
+		[]interface{}{1.0, 2.0},
+		[]map[string]interface{}{
+			{"String": "test struct"},
+			{"String": "test struct"},
+		},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct"},
+			map[string]interface{}{"String": "test struct"},
+		},
+		[]*map[string]interface{}{
+			{"String": "test struct"},
+			{"String": "test struct"},
+		},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct", "_ptr": true},
+			map[string]interface{}{"String": "test struct", "_ptr": true},
+		},
+		[]Struct{
+			{String: "test struct", Int: 100, Bool: true},
+			{String: "test struct 2", Int: 200, Bool: true},
+		},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "Struct"},
+			map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "Struct"},
+		},
+		[]*Struct{
+			{String: "test struct", Int: 100, Bool: true},
+			{String: "test struct 2", Int: 200, Bool: true},
+		},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "Struct", "_ptr": true},
+			map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "Struct", "_ptr": true},
+		},
 	}
 
+	// map转换成json map
 	for i := 0; i < len(sources); i += 2 {
 		source := &map[string]interface{}{
 			"Any": sources[i],
@@ -607,9 +515,171 @@ func TestCopyMapAnyToMap(t *testing.T) {
 			panic(err)
 		}
 
+		resultMap := sources[i+1]
+		targetAny := (*target)["Any"]
+		debugutil.PrintJson("result=", resultMap)
+		debugutil.PrintJson("target=", targetAny)
+		if reflect.DeepEqual(resultMap, targetAny) == false {
+			panic("")
+		}
+	}
+
+	// struct转换成json map
+	for i := 0; i < len(sources); i += 2 {
+		source := &ClassAny{
+			Any: sources[i],
+		}
+		target := &map[string]interface{}{}
+		err := New(source).WithTypeMap(types).To(target)
+		if err != nil {
+			panic(err)
+		}
+
+		resultMap := sources[i+1]
+		targetAny := (*target)["Any"]
+		debugutil.PrintJson("result=", resultMap)
+		debugutil.PrintJson("target=", targetAny)
+		if reflect.DeepEqual(resultMap, targetAny) == false {
+			panic("")
+		}
+	}
+
+}
+
+func TestCopyJsonMapToStruct(t *testing.T) {
+	sources := []interface{}{
+		//"test string type",
+		//"test string type",
+		//true,
+		//true,
+		//map[string]interface{}{
+		//	"String": "test struct",
+		//},
+		//map[string]interface{}{
+		//	"String": "test struct",
+		//},
+		//&map[string]interface{}{
+		//	"String": "test struct",
+		//},
+		//map[string]interface{}{
+		//	"String": "test struct",
+		//	"_ptr":   true,
+		//},
+		//map[string]interface{}{
+		//	"a": "test a",
+		//	"b": "test b",
+		//},
+		//map[string]interface{}{
+		//	"a": "test a",
+		//	"b": "test b",
+		//},
+		//map[string]interface{}{
+		//	"a": &map[string]interface{}{"String": "test map struct a"},
+		//	"b": &map[string]interface{}{"String": "test map struct b"},
+		//},
+		//map[string]interface{}{
+		//	"a": map[string]interface{}{"String": "test map struct a", "_ptr": true},
+		//	"b": map[string]interface{}{"String": "test map struct b", "_ptr": true},
+		//},
+		//Struct{String: "test struct", Int: 100, Bool: true},
+		//map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct"},
+		//&Struct{String: "test struct", Int: 100, Bool: true},
+		//map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct", "_ptr": true},
+		//[]interface{}{"1", "2"},
+		//[]interface{}{"1", "2"},
+		//[]interface{}{
+		//	map[string]interface{}{"String": "test struct"},
+		//	map[string]interface{}{"String": "test struct"},
+		//},
+		//[]interface{}{
+		//	map[string]interface{}{"String": "test struct"},
+		//	map[string]interface{}{"String": "test struct"},
+		//},
+		//[]interface{}{
+		//	&map[string]interface{}{"String": "test struct"},
+		//	&map[string]interface{}{"String": "test struct"},
+		//},
+		//[]interface{}{
+		//	map[string]interface{}{"String": "test struct", "_ptr": true},
+		//	map[string]interface{}{"String": "test struct", "_ptr": true},
+		//},
+		[]Struct{
+			{String: "test struct", Int: 100, Bool: true},
+			//{String: "test struct 2", Int: 200, Bool: true},
+		},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "Struct"},
+			//map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "Struct"},
+		},
+		//[]*Struct{
+		//	{String: "test struct", Int: 100, Bool: true},
+		//	{String: "test struct 2", Int: 200, Bool: true},
+		//},
+		//[]interface{}{
+		//	map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "Struct", "_ptr": true},
+		//	map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "Struct", "_ptr": true},
+		//},
+	}
+
+	// map转换成json map
+	//for i := 0; i < len(sources); i += 2 {
+	//	source := &map[string]interface{}{
+	//		"Any": sources[i],
+	//	}
+	//	target := &map[string]interface{}{}
+	//	origin, _ := NewContext(source)
+	//	origin.WithProvideTyp(reflect.TypeOf(&ClassAny{}))
+	//	err := origin.To(target)
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//
+	//	resultMap := sources[i+1]
+	//	targetAny := (*target)["Any"]
+	//	debugutil.PrintJson("result=", resultMap)
+	//	debugutil.PrintJson("target=", targetAny)
+	//	if reflect.DeepEqual(resultMap, targetAny) == false {
+	//		panic("")
+	//	}
+	//}
+
+	// struct转换成json map
+	//for i := 0; i < len(sources); i += 2 {
+	//	source := &ClassAny{
+	//		Any: sources[i],
+	//	}
+	//	target := &map[string]interface{}{}
+	//	err := New(source).WithTypeMap(types).To(target)
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//
+	//	resultMap := sources[i+1]
+	//	targetAny := (*target)["Any"]
+	//	debugutil.PrintJson("result=", resultMap)
+	//	debugutil.PrintJson("target=", targetAny)
+	//	if reflect.DeepEqual(resultMap, targetAny) == false {
+	//		panic("")
+	//	}
+	//}
+
+	// json map转换成struct
+	for i := 0; i < len(sources); i += 2 {
+		source := &map[string]interface{}{
+			"Any": sources[i+1],
+		}
+		target := &ClassAny{}
+		origin, _ := NewContext(target)
+		err := origin.WithTypeMap(types).From(source)
+		if err != nil {
+			panic(err)
+		}
+
 		debugutil.PrintJson("result=", sources[i])
-		debugutil.PrintJson("target=", (*target)["Any"])
-		if reflect.DeepEqual(sources[i+1], (*target)["Any"]) == false {
+		debugutil.PrintJson("target=", target.Any)
+		fmt.Printf("copy_test[679]> %T\n", sources[i])
+		fmt.Printf("copy_test[679]> %T\n", target.Any)
+		if reflect.DeepEqual(sources[i], target.Any) == false {
 			panic("")
 		}
 	}
