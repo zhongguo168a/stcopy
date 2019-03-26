@@ -57,6 +57,54 @@ func (val Value) unfoldInterface() (r Value) {
 	return val
 }
 
+// 如果val是map类型, 检查键值为_type和_ptr的值, 获取反射类型
+func (val Value) parseMapType(ctx *Context) (x reflect.Type, err error) {
+	srcunfold := val.unfoldInterface()
+	if srcunfold.Upper().Kind() != reflect.Map {
+		err = errors.New("not map")
+		return
+	}
+	src := val.Upper().Interface().(map[string]interface{})
+	// 处理类型
+	sttype := func() (y reflect.Type) {
+		istr, srcok := src["_type"]
+		if srcok == false {
+			return
+		}
+		delete(src, "_type")
+
+		str := istr.(string)
+		t, typok := ctx.typeMap[str]
+		if typok == false {
+			return
+		}
+
+		y = t
+		return
+	}()
+	// 处理指针
+	isPtr := func() (x bool) {
+		istr, ok := src["_ptr"]
+		if ok == false {
+			return false
+		}
+		delete(src, "_ptr")
+		x = istr.(bool)
+		return
+	}()
+
+	//
+	if sttype == nil {
+		x = srcunfold.Upper().Type()
+	} else {
+		x = sttype
+	}
+	if isPtr {
+		x = reflect.PtrTo(x)
+	}
+	return
+}
+
 // 为map对象添加结构类型 {"_type":Name}
 func (val Value) updateMapStructTypeBy(source Value) (err error) {
 	indirect := source.Indirect()
