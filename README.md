@@ -67,7 +67,8 @@ go get github.com/zhongguo168a/stcopy
 * 对于类型不一致的情况
     * 可以在ValueA增加To(ctx)和From(ctx)方法实现转换
     * 可通过WithParams()方法, 在ctx中获取params, 实现不同场景的转换
-    * 如果没有设置, 默认使用reflect.Convert方法来转化, 可参考单元测试中, 带Convert的方法 
+    * 如果没有设置To/From, 默认使用reflect.Convert方法来转化
+    * 遇到转换成目标类型, 返回错误
 * 如果字段中存在不需要/无法拷贝的类型(例如time.Time), 可以通过设置BaseTypes, 像int类型一样, 直接赋值过去 
 * 提供了valid()方法, 深度优先, 递归遍历所有字段的valid()方法(如果存在)
 

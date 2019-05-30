@@ -715,6 +715,8 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 				case reflect.Bool:
 					x = convert2Bool(srcref, provideTyp)
 				default:
+					err = errors.New("convert fail")
+					return
 				}
 				//switch srcref.Type().Kind() {
 				//case reflect.Interface:
