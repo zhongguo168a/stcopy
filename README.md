@@ -59,7 +59,7 @@ go get github.com/zhongguo168a/stcopy
 * 可通过配置中的FieldTag参数, 修改字段的名字
 
 ```
-  	// 例如在结构的Id字段 定义了bson:"_id", 转换后的map["Id"] 变成 map["_id"]
+  	// 例如在结构的Id字段 定义了bson:"_id", 转换后的struct.Id 变成 map["_id"]
     
 ```
 
