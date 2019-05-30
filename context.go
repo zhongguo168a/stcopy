@@ -5,26 +5,26 @@ import (
 	"reflect"
 )
 
-func NewContext(val interface{}) (ctx *Context, err error) {
-	ref := reflect.ValueOf(val)
-
-	if ref.Kind() != reflect.Ptr {
-		err = errors.New("origin must ptr struct or map")
-		return
-	}
-
-	unfold := TypeUtiler.UnfoldType(ref.Type())
-
-	if unfold.Kind() != reflect.Struct && unfold.Kind() != reflect.Map {
-		err = errors.New("origin must ptr struct or map")
-		return
-	}
-
-	ctx = &Context{
-		valueA: Value(ref),
-	}
-	return
-}
+//func NewContext(val interface{}) (ctx *Context, err error) {
+//	ref := reflect.ValueOf(val)
+//
+//	if ref.Kind() != reflect.Ptr {
+//		err = errors.New("origin must ptr struct or map")
+//		return
+//	}
+//
+//	unfold := TypeUtiler.UnfoldType(ref.Type())
+//
+//	if unfold.Kind() != reflect.Struct && unfold.Kind() != reflect.Map {
+//		err = errors.New("origin must ptr struct or map")
+//		return
+//	}
+//
+//	ctx = &Context{
+//		valueA: Value(ref),
+//	}
+//	return
+//}
 
 func New(val interface{}) (ctx *Context) {
 	ref := reflect.ValueOf(val)
@@ -43,6 +43,7 @@ func NewValue(ref reflect.Value) (ctx *Context) {
 
 	ctx = &Context{
 		valueA: Value(ref),
+		Config: NewConfig(),
 	}
 	return
 }
@@ -81,7 +82,13 @@ type Context struct {
 	Config *Config
 	// 类型的映射
 	typeMap TypeMap
-	//
+	// 视作base类型的类型
+	baseMap TypeMap
+}
+
+func NewConfig() (obj *Config) {
+	obj = &Config{}
+	return
 }
 
 type Config struct {
@@ -89,6 +96,9 @@ type Config struct {
 	// 用于转化成配置文件的时候, 便于查阅
 	// 需要使用 @description 标签的支持
 	EnumToName bool
+	// 转换成map时, 检查FieldTag定义的名字, 例如json/bson, 根据FieldTag转换成对应的Field名字
+	// 例如在Id 字段 定义了bson:"_id", 转换后的map["Id"] 变成 map["_id"]
+	FieldTag string
 }
 
 func (ctx *Context) getProvideTyp(src, tar Value) (typ reflect.Type, err error) {
@@ -120,6 +130,11 @@ func (ctx *Context) WithProvideTyp(val reflect.Type) *Context {
 
 func (ctx *Context) WithTypeMap(val TypeMap) *Context {
 	ctx.typeMap = val
+	return ctx
+}
+
+func (ctx *Context) WithBaseTypes(val TypeMap) *Context {
+	ctx.baseMap = val
 	return ctx
 }
 

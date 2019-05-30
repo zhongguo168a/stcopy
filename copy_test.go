@@ -7,11 +7,16 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 )
 
-var types = NewTypeMap([]reflect.Type{
+var types = NewTypeMap(
 	reflect.TypeOf(Struct{}),
-})
+)
+
+var baseTypes = NewTypeMap(
+	reflect.TypeOf(time.Time{}),
+)
 
 type TestEnum int8
 
@@ -53,6 +58,8 @@ type ClassBase struct {
 	String string
 	Bool   bool
 	Bytes  []byte
+
+	ConvertString ConvertString
 }
 
 type ClassCombination struct {
@@ -83,7 +90,7 @@ type ClassMap struct {
 
 type ClassEnum struct {
 	Enum    TestEnum
-	EnumMap *map[TestEnum]bool
+	EnumMap map[TestEnum]bool
 }
 
 type Struct struct {
@@ -92,8 +99,26 @@ type Struct struct {
 	Bool   bool
 }
 
+type StructAny struct {
+	Any interface{}
+}
+
 type Convert struct {
 	Int int16
+}
+
+func (s *Convert) To(ctx *Context) (r interface{}) {
+	b, _ := json.Marshal(s)
+	r = string(b)
+	return
+}
+
+func (s *Convert) From(ctx *Context, val interface{}) (err error) {
+	err = json.Unmarshal([]byte(val.(string)), &s)
+	if err != nil {
+		return
+	}
+	return
 }
 
 func (s *Convert) ToString(ctx *Context) (r string) {
@@ -122,6 +147,8 @@ func (s *ConvertMap) FromMap(ctx *Context, val map[string]interface{}) (err erro
 	return
 }
 
+type ConvertString string
+
 type ConvertDefine int
 
 func (s ConvertDefine) ToString() (r string) {
@@ -137,6 +164,43 @@ func (s ConvertDefine) FromString(val string) (r ConvertDefine, err error) {
 	return
 }
 
+func TestCopyMapToStructArray(t *testing.T) {
+	sources := []interface{}{
+		// next
+		&map[string]interface{}{"Array": map[string]interface{}{"0": "A1", "2": "A3"}}, // source
+		&ClassArray{}, // result
+		&ClassArray{Array: []string{"A1", "", "A3"}}, // result
+		// next
+		&map[string]interface{}{"ArrayStruct": map[string]interface{}{
+			"0": map[string]interface{}{"String": "test struct", "Bool": false, "Int": int(100)},
+		}}, // source
+		&ClassArray{ArrayStruct: []*Struct{
+			{String: "test struct", Bool: true, Int: 200.0},
+			{String: "test struct", Bool: true, Int: 200.0},
+		}}, // result
+		&ClassArray{ArrayStruct: []*Struct{
+			{String: "test struct", Bool: false, Int: 100.0},
+			{String: "test struct", Bool: true, Int: 200.0},
+		}}, // result
+	}
+
+	for i := 0; i < len(sources); i += 3 {
+		err := New(sources[i+1]).From(sources[i])
+		if err != nil {
+			t.Error("stcopy: " + err.Error())
+		}
+
+		debugutil.PrintJson("result=", sources[i+2])
+		debugutil.PrintJson("target=", sources[i+1])
+		fmt.Printf("copy_test[679]> %T\n", sources[i+2])
+		fmt.Printf("copy_test[679]> %T\n", sources[i+1])
+		if reflect.DeepEqual(sources[i+2], sources[i+1]) == false {
+			t.Error("not equal")
+			break
+		}
+	}
+}
+
 func TestCopyMapToStructEnum(t *testing.T) {
 	sources := []interface{}{
 		// next
@@ -146,7 +210,7 @@ func TestCopyMapToStructEnum(t *testing.T) {
 		// next
 		&map[string]interface{}{"EnumMap": map[string]interface{}{"A2": true}}, // source
 		&ClassEnum{}, // target
-		&ClassEnum{EnumMap: &map[TestEnum]bool{TestEnum_A2: true}}, // result
+		&ClassEnum{EnumMap: map[TestEnum]bool{TestEnum_A2: true}}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
@@ -173,7 +237,7 @@ func TestCopyMapToStructCombination(t *testing.T) {
 	}
 
 	for i := 0; i < len(sources); i += 3 {
-		origin, _ := NewContext(sources[i])
+		origin := New(sources[i])
 		err := origin.To(sources[i+1])
 		if err != nil {
 			t.Error("stcopy: " + err.Error())
@@ -200,7 +264,7 @@ func TestCopyStructToStructCombination(t *testing.T) {
 	}
 
 	for i := 0; i < len(sources); i += 3 {
-		origin, _ := NewContext(sources[i])
+		origin := New(sources[i]).WithBaseTypes(baseTypes)
 		err := origin.To(sources[i+1])
 		if err != nil {
 			t.Error("stcopy: " + err.Error())
@@ -223,7 +287,7 @@ func TestCopyStructToStruct(t *testing.T) {
 	}
 
 	for i := 0; i < len(sources); i += 3 {
-		origin, _ := NewContext(sources[i])
+		origin := New(sources[i]).WithBaseTypes(baseTypes)
 		err := origin.To(sources[i+1])
 		if err != nil {
 			t.Error("stcopy: " + err.Error())
@@ -246,7 +310,7 @@ func TestCopyStructToStructConvert(t *testing.T) {
 	}
 
 	for i := 0; i < len(sources); i += 3 {
-		origin, _ := NewContext(sources[i])
+		origin := New(sources[i])
 		err := origin.To(sources[i+1])
 		if err != nil {
 			t.Error("stcopy: " + err.Error())
@@ -255,7 +319,8 @@ func TestCopyStructToStructConvert(t *testing.T) {
 		debugutil.PrintJson("result=", sources[i+2])
 		debugutil.PrintJson("target=", sources[i+1])
 		if reflect.DeepEqual(sources[i+2], sources[i+1]) == false {
-			t.Error("not equal")
+			t.Error("not equal: ", i)
+			break
 		}
 	}
 }
@@ -271,13 +336,25 @@ func TestCopyMapToStructBase(t *testing.T) {
 		//&ClassBase{String: "test 2", Int: 2},                  // target
 		//&ClassBase{String: "test 1", Int: 1},                  // result
 		//
-		&map[string]interface{}{"Bytes": []byte("test")}, // source
-		&ClassBase{},                      // target
-		&ClassBase{Bytes: []byte("test")}, // result
+		//&map[string]interface{}{"Bytes": "dGVzdA=="}, // source
+		//&ClassBase{},                      // target
+		//&ClassBase{Bytes: []byte("test")}, // result
+		////
+		//&map[string]interface{}{"Bytes": []byte("test")}, // source
+		//&ClassBase{},                      // target
+		//&ClassBase{Bytes: []byte("test")}, // result
+		//
+		//&map[string]interface{}{"Time": time.Unix(1, 1)}, // source
+		//&ClassBase{},                      // target
+		//&ClassBase{Time: time.Unix(1, 1)}, // result
+		// next
+		&map[string]interface{}{"ConvertString": "test string"}, // source
+		&ClassBase{},                             // target
+		&ClassBase{ConvertString: "test string"}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
-		origin, _ := NewContext(sources[i])
+		origin := New(sources[i]).WithBaseTypes(baseTypes)
 		err := origin.To(sources[i+1])
 		if err != nil {
 			t.Error("stcopy: " + err.Error())
@@ -324,24 +401,25 @@ func TestCopyStructToMapConvert(t *testing.T) {
 
 	sources := []interface{}{
 		//
-		//&ClassConvert{Convert: &Convert{Int: 100}},                        // source
-		//&map[string]interface{}{},                                         // target
-		//&map[string]interface{}{"Convert": `{"Int":100}`, "Enum": int(0)}, // result
+		&ClassConvert{Convert: &Convert{Int: 100}}, // source
+		&map[string]interface{}{},                  // target
+		&map[string]interface{}{"Convert": "{\"Int\":100}", "Enum": 0.0, "ConvertDefine": 0.0}, // result
 		//
-		&ClassBase{Bytes: []byte("test")},                                                     // source
-		&map[string]interface{}{"String": "test 1"},                                           // target
-		&map[string]interface{}{"Bytes": "dGVzdA==", "String": "", "Int": 0.0, "Bool": false}, // result
+		&ClassBase{Bytes: []byte("test")},           // source
+		&map[string]interface{}{"String": "test 1"}, // target
+		&map[string]interface{}{"Bytes": "dGVzdA==", "String": "", "Int": 0.0, "Bool": false, "ConvertString": ""}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
-		err := New(sources[i]).To(sources[i+1])
+		err := New(sources[i]).WithBaseTypes(baseTypes).To(sources[i+1])
 		if err != nil {
 			t.Error("stcopy: " + err.Error())
 		}
 		debugutil.PrintJson("result=", sources[i+2])
 		debugutil.PrintJson("target=", sources[i+1])
 		if reflect.DeepEqual(sources[i+2], sources[i+1]) == false {
-			t.Error("not equal")
+			t.Error("not equal: ", i)
+			break
 		}
 	}
 }
@@ -349,21 +427,17 @@ func TestCopyStructToMapConvert(t *testing.T) {
 func TestCopyStructToMapBase(t *testing.T) {
 
 	sources := []interface{}{
-		//&ClassStruct{&Struct{String: "test struct", Int: 100}}, // source
-		//&map[string]interface{}{},                              // target
-		//&map[string]interface{}{"Struct": map[string]interface{}{"String": "test struct", "Bool": false, "Int": 100.0, "_ptr": true}}, // result
+		&ClassStruct{&Struct{String: "test struct", Int: 100}}, // source
+		&map[string]interface{}{},                              // target
+		&map[string]interface{}{"Struct": map[string]interface{}{"String": "test struct", "Bool": false, "Int": 100.0, "_ptr": true}}, // result
 		// next 结构没有赋值的字段, 也会覆盖掉目标字段
-		&ClassBase{Bytes: []byte("test"), Int: 1},                                             // source
-		&map[string]interface{}{"String": "test 2", "Int": 2.0},                               // target
-		&map[string]interface{}{"Bytes": "dGVzdA==", "String": "", "Int": 1.0, "Bool": false}, // result
-		// next
-		//&ClassBase{String: "test 1", Int: 1},                                        // source
-		//&map[string]interface{}{"Int": 2, "Bool": true},                             // target
-		//&map[string]interface{}{"String": "test 1", "Int": int64(1), "Bool": false}, // result
+		&ClassBase{Bytes: []byte("test"), Int: 1, ConvertString: ConvertString("convert string")},                                // source
+		&map[string]interface{}{"String": "test 2", "Int": 2.0, "Bool": true},                                                    // target
+		&map[string]interface{}{"Bytes": "dGVzdA==", "String": "", "Int": 1.0, "Bool": false, "ConvertString": "convert string"}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
-		err := New(sources[i]).To(sources[i+1])
+		err := New(sources[i]).WithBaseTypes(baseTypes).To(sources[i+1])
 		if err != nil {
 			t.Error("stcopy: " + err.Error())
 			return
@@ -374,6 +448,7 @@ func TestCopyStructToMapBase(t *testing.T) {
 
 		if reflect.DeepEqual(sources[i+2], sources[i+1]) == false {
 			t.Error("not equal")
+			break
 		}
 	}
 }
@@ -570,7 +645,7 @@ func TestCopyAnyToJsonMap(t *testing.T) {
 			"Any": sources[i],
 		}
 		target := &map[string]interface{}{}
-		origin, _ := NewContext(source)
+		origin := New(source)
 		origin.WithProvideTyp(reflect.TypeOf(&ClassAny{}))
 		err := origin.To(target)
 		if err != nil {
@@ -620,13 +695,6 @@ func TestCopyJsonMapToStruct(t *testing.T) {
 		map[string]interface{}{
 			"String": "test struct",
 		},
-		&map[string]interface{}{
-			"String": "test struct",
-		},
-		map[string]interface{}{
-			"String": "test struct",
-			"_ptr":   true,
-		},
 		map[string]interface{}{
 			"a": "test a",
 			"b": "test b",
@@ -640,13 +708,16 @@ func TestCopyJsonMapToStruct(t *testing.T) {
 			"b": &map[string]interface{}{"String": "test map struct b"},
 		},
 		map[string]interface{}{
-			"a": map[string]interface{}{"String": "test map struct a", "_ptr": true},
-			"b": map[string]interface{}{"String": "test map struct b", "_ptr": true},
+			"a": map[string]interface{}{"String": "test map struct a"},
+			"b": map[string]interface{}{"String": "test map struct b"},
 		},
-		Struct{String: "test struct", Int: 100, Bool: true},
 		map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct"},
-		&Struct{String: "test struct", Int: 100, Bool: true},
+		Struct{String: "test struct", Int: 100, Bool: true},
 		map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct", "_ptr": true},
+		&Struct{String: "test struct", Int: 100, Bool: true},
+		// next
+		map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "NoStruct", "_ptr": true},
+		map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "NoStruct", "_ptr": true},
 		[]interface{}{"1", "2"},
 		[]interface{}{"1", "2"},
 		[]interface{}{
@@ -662,45 +733,54 @@ func TestCopyJsonMapToStruct(t *testing.T) {
 			&map[string]interface{}{"String": "test struct"},
 		},
 		[]interface{}{
-			map[string]interface{}{"String": "test struct", "_ptr": true},
-			map[string]interface{}{"String": "test struct", "_ptr": true},
-		},
-		[]interface{}{
-			Struct{String: "test struct", Int: 100, Bool: true},
-			Struct{String: "test struct 2", Int: 200, Bool: true},
+			map[string]interface{}{"String": "test struct"},
+			map[string]interface{}{"String": "test struct"},
 		},
 		[]interface{}{
 			map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "Struct"},
 			map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "Struct"},
 		},
 		[]interface{}{
-			&Struct{String: "test struct", Int: 100, Bool: true},
-			&Struct{String: "test struct 2", Int: 200, Bool: true},
+			Struct{String: "test struct", Int: 100, Bool: true},
+			Struct{String: "test struct 2", Int: 200, Bool: true},
 		},
 		[]interface{}{
 			map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "Struct", "_ptr": true},
 			map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "Struct", "_ptr": true},
+		},
+		[]interface{}{
+			&Struct{String: "test struct", Int: 100, Bool: true},
+			&Struct{String: "test struct 2", Int: 200, Bool: true},
+		},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "NoStruct", "_ptr": true},
+			map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "NoStruct", "_ptr": true},
+		},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "NoStruct", "_ptr": true},
+			map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "NoStruct", "_ptr": true},
 		},
 	}
 
 	// json map转换成struct
 	for i := 0; i < len(sources); i += 2 {
 		source := &map[string]interface{}{
-			"Any": sources[i+1],
+			"Any": sources[i],
 		}
 		target := &ClassAny{}
-		origin, _ := NewContext(target)
-		err := origin.WithTypeMap(types).From(source)
+		origin := New(target).WithTypeMap(types)
+		err := origin.From(source)
 		if err != nil {
 			panic(err)
 		}
 
-		debugutil.PrintJson("result=", sources[i])
+		debugutil.PrintJson("result=", sources[i+1])
 		debugutil.PrintJson("target=", target.Any)
-		fmt.Printf("copy_test[679]> %T\n", sources[i])
+		fmt.Printf("copy_test[679]> %T\n", sources[i+1])
 		fmt.Printf("copy_test[679]> %T\n", target.Any)
-		if reflect.DeepEqual(sources[i], target.Any) == false {
-			t.Error("not equal")
+		if reflect.DeepEqual(sources[i+1], target.Any) == false {
+			t.Error("not equal: " + strconv.Itoa(i))
+			break
 		}
 	}
 }

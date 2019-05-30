@@ -20,7 +20,7 @@
 | []byte      |    base64 string |
 | struct        |  map[string]interface{}|
 | interface{}(基础类型)   |  interface{}(json map对应类型)|
-| interface{}(struct)    |  map[string]interface{"_type":"type name", "_ptr":boolean}
+| interface{}(struct类型)    |  map[string]interface{"_type":"type name", "_ptr":boolean}
 
 
 #### 已实现功能

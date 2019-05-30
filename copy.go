@@ -110,17 +110,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 
 	srcref := source.Upper()
 	tarref := target.Upper()
-
-	// 所有指针类型的map结构都转化成非指针类型
-	//if provideTyp.Kind() == reflect.Ptr {
-	//	provideTypElem := provideTyp.Elem()
-	//	if provideTypElem.Kind() == reflect.Map {
-	//		fmt.Println(prefix+"copy convert: provide typ: ", provideTyp, "->", provideTypElem)
-	//		provideTyp = provideTypElem
-	//		srcref = srcref.Elem()
-	//	}
-	//}
-
+	//
 	//prefix := strings.Repeat("----", depth)
 	//fmt.Println(prefix+"> copy:", "provide typ=", provideTyp, "kind=", provideTyp.Kind())
 	//fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref)
@@ -132,12 +122,44 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	//	}
 	//	return
 	//}())
-
+	//
 	// 源是否空
 	if srcref.IsValid() == false {
 		return
 	}
 	if isHard(srcref.Kind()) && srcref.IsNil() {
+		return
+	}
+	// 处理base map
+	_, ok := ctx.baseMap[provideTyp.Name()]
+	if ok == true {
+		if tarref.CanSet() == false {
+			tarref = reflect.New(provideTyp)
+			if provideTyp.Kind() != reflect.Ptr {
+				tarref = tarref.Elem()
+			}
+		}
+		tarref.Set(func() (x reflect.Value) {
+			// 规定的类型跟源类型不一致的情况
+			if srcref.Type() != provideTyp {
+				switch srcref.Type().Kind() {
+				case reflect.Interface:
+					x = srcref.Elem().Convert(provideTyp)
+				default:
+					if provideTyp.Kind().String() == provideTyp.String() {
+						x = srcref.Convert(provideTyp)
+					} else {
+						// 枚举
+						err = errors.New("enum convert function not found")
+						return
+					}
+				}
+			} else {
+				x = srcref
+			}
+			return
+		}())
+		result = Value(tarref)
 		return
 	}
 
@@ -149,6 +171,46 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 		if tarref.Kind() == reflect.Interface {
 			tarref = tarref.Elem()
 		}
+	}
+
+	// 修正来源值
+	{
+		// 创建新的值
+		unfold := TypeUtiler.UnfoldType(provideTyp)
+		switch unfold.Kind() {
+		case reflect.Array, reflect.Slice:
+			switch ctx.convertType {
+			case JsonMapToStruct:
+				if srcref.Kind() == reflect.Map { // 处理来源为map的情况
+					var max = 0
+					for _, key := range srcref.MapKeys() {
+						idx, _ := strconv.Atoi(key.String())
+						if idx > max {
+							max = idx
+						}
+					}
+					max = max + 1
+					srcref = func() (x reflect.Value) {
+						x = reflect.MakeSlice(reflect.SliceOf(srcref.Type().Elem()), max, max)
+						for _, key := range srcref.MapKeys() {
+							idx, _ := strconv.Atoi(key.String())
+							x.Index(idx).Set(srcref.MapIndex(key))
+						}
+						return
+					}()
+
+				}
+			}
+		}
+
+		//fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref, ",  canset=", srcref.CanSet(), func() (x string) {
+		//	if isHard(srcref.Kind()) && srcref.IsNil() {
+		//		x = "isnil=true"
+		//	} else {
+		//		x = "isnil=false"
+		//	}
+		//	return
+		//}(), "<last>")
 	}
 
 	// 检查目标是否需要创建新的值
@@ -180,13 +242,20 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	if checkNewTarget {
 		// 创建新的值
 		unfold := TypeUtiler.UnfoldType(provideTyp)
+
 		switch unfold.Kind() {
-		case reflect.Array, reflect.Slice:
+		case reflect.Array:
+			tarref = reflect.New(provideTyp).Elem()
+		case reflect.Slice:
 			tarref = func() (x reflect.Value) {
 				switch ctx.convertType {
 				case AnyToJsonMap:
 					if provideTyp == bytesTyp {
-						x = reflect.New(stringTyp).Elem()
+						if srcref.Kind() == reflect.String {
+							x = reflect.New(stringTyp).Elem()
+						} else {
+							x = reflect.MakeSlice(provideTyp, srcref.Len(), srcref.Cap())
+						}
 					} else {
 						slice := make([]interface{}, srcref.Len(), srcref.Cap())
 						x = reflect.ValueOf(slice)
@@ -194,7 +263,36 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 				case StructToStruct:
 					x = reflect.MakeSlice(provideTyp, srcref.Len(), srcref.Cap())
 				case JsonMapToStruct:
-					x = reflect.MakeSlice(provideTyp, srcref.Len(), srcref.Cap())
+
+					if srcref.Kind() == reflect.Map { // 处理来源为map的情况
+						var max = 0
+						for _, key := range srcref.MapKeys() {
+							idx, _ := strconv.Atoi(key.String())
+							if idx > max {
+								max = idx
+							}
+						}
+						max = max + 1
+						x = reflect.MakeSlice(provideTyp, max, max)
+						a := reflect.MakeSlice(reflect.SliceOf(srcref.Type().Elem()), max, max)
+						for _, key := range srcref.MapKeys() {
+							idx, _ := strconv.Atoi(key.String())
+							a.Index(idx).Set(srcref.MapIndex(key))
+						}
+						srcref = a
+
+					} else {
+						if provideTyp == bytesTyp {
+							if srcref.Kind() == reflect.String {
+								x = reflect.New(stringTyp).Elem()
+							} else {
+								x = reflect.MakeSlice(provideTyp, srcref.Len(), srcref.Cap())
+							}
+						} else {
+							x = reflect.MakeSlice(provideTyp, srcref.Len(), srcref.Cap())
+						}
+					}
+
 				}
 				//if isHard(provideTyp.Elem().Kind()) {
 				//	slice := make([]interface{}, srcref.Len(), srcref.Cap())
@@ -275,37 +373,32 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	//	}
 	//	return
 	//}(), "<last>")
-
+	//
 	// 如果源与目标的类型不一致
 	// 0层不可以convert, 请直接调用Convert函数处理
-	if depth != 0 && srcref.Kind() != tarref.Kind() {
+	if depth != 0 && reflect.Indirect(srcref).Kind() != reflect.Indirect(tarref).Kind() {
 		switch ctx.direction {
 		case AtoB:
 			mname := "To" + ctx.getMethodType(tarref)
 			mtype, ok := srcref.Type().MethodByName(mname)
 			if ok == true {
-				methodVal := srcref.MethodByName(mname)
-				if mtype.Type.NumIn() > 2 {
-					err = errors.New("func " + mname + " NumIn() must 1 or 0")
+				r, callerr := ctx.callToMethod(srcref, mname, mtype)
+				if callerr != nil {
+					err = callerr
 					return
 				}
-				results := func() (x []reflect.Value) {
-					if mtype.Type.NumIn() == 2 {
-						x = methodVal.Call([]reflect.Value{reflect.ValueOf(ctx)})
+				result = Value(r)
+				return
+			}
 
-					} else {
-						x = methodVal.Call([]reflect.Value{})
-					}
+			mtype, ok = srcref.Type().MethodByName("To")
+			if ok == true {
+				r, callerr := ctx.callToMethod(srcref, "To", mtype)
+				if callerr != nil {
+					err = callerr
 					return
-				}()
-				// 包含error
-				if mtype.Type.NumOut() > 1 {
-					if results[1].IsNil() == false {
-						err = results[1].Interface().(error)
-						return
-					}
 				}
-				result = Value(results[0])
+				result = Value(r)
 				return
 			}
 		case AfromB:
@@ -313,37 +406,25 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 				mname := "From" + ctx.getMethodType(srcref)
 				mtype, ok := tarref.Type().MethodByName(mname)
 				if ok == true {
-					methodVal := tarref.MethodByName(mname)
-					if mtype.Type.NumIn() > 3 || mtype.Type.NumIn() == 1 {
-						err = errors.New("func " + mname + " NumIn() must 2 or 1")
+					r, callerr := ctx.callFromMethod(srcref, tarref, mname, mtype)
+					if callerr != nil {
+						err = callerr
 						return
 					}
-
-					results := func() (x []reflect.Value) {
-						if mtype.Type.NumIn() == 3 {
-							x = methodVal.Call([]reflect.Value{reflect.ValueOf(ctx), srcref})
-						} else {
-							x = methodVal.Call([]reflect.Value{srcref})
-						}
-						return
-					}()
-
-					if mtype.Type.NumOut() > 0 {
-						if tarref.Kind() == reflect.Ptr {
-							if results[0].IsNil() == false {
-								err = results[0].Interface().(error)
-								return
-							}
-						} else {
-							tarref.Set(results[0])
-						}
-						result = Value(results[0])
-
-					}
-
+					result = Value(r)
 					return
 				}
 
+				mtype, ok = tarref.Type().MethodByName("From")
+				if ok == true {
+					r, callerr := ctx.callFromMethod(srcref, tarref, "From", mtype)
+					if callerr != nil {
+						err = callerr
+						return
+					}
+					result = Value(r)
+					return
+				}
 			}
 		}
 	}
@@ -388,23 +469,35 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 				}
 			}
 		case JsonMapToStruct:
-			if isHard(provideTyp.Elem().Kind()) {
-				for i := 0; i < srcref.Len(); i++ {
-					srcitem := srcref.Index(i)
-					taritem := tarref.Index(i)
-					retval, copyerr := ctx.copy(Value(srcitem), Value(taritem), provideTyp.Elem(), inInterface, depth+1)
-					if copyerr != nil {
-						err = copyerr
-						return
-					}
-					tarref.Index(i).Set(retval.Upper())
+			if provideTyp == bytesTyp {
+				if srcref.Kind() == reflect.String {
+					b, _ := base64.StdEncoding.DecodeString(srcref.String())
+					tarref = reflect.ValueOf(b)
+				} else {
+					reflect.Copy(tarref, srcref)
 				}
-			} else if provideTyp.Elem().Kind() == reflect.Uint8 && srcref.Type().Kind() == reflect.String {
-				b, _ := base64.StdEncoding.DecodeString(srcref.String())
-				tarref = reflect.ValueOf(b)
+
 			} else {
-				reflect.Copy(tarref, srcref)
+				if isHard(provideTyp.Elem().Kind()) || provideTyp.Elem().Kind() != srcref.Type().Kind() {
+					for i := 0; i < srcref.Len(); i++ {
+						srcitem := srcref.Index(i)
+						taritem := tarref.Index(i)
+						if srcitem.IsValid() == false || srcitem.IsNil() {
+							continue
+						}
+
+						retval, copyerr := ctx.copy(Value(srcitem), Value(taritem), provideTyp.Elem(), inInterface, depth+1)
+						if copyerr != nil {
+							err = copyerr
+							return
+						}
+						tarref.Index(i).Set(retval.Upper())
+					}
+				} else {
+					reflect.Copy(tarref, srcref)
+				}
 			}
+
 		}
 	case reflect.Interface:
 		switch ctx.convertType {
@@ -414,6 +507,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 				return
 			}
 		case JsonMapToStruct:
+			// 矫正一下map
 			provideTyp = func() (x reflect.Type) {
 				srcunfold := source.unfoldInterface()
 				checkMap := func() (y bool) {
@@ -484,6 +578,12 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 					tarref = tarref.Elem()
 				}
 			}
+		case JsonMapToStruct:
+			if tarref.Kind() == reflect.Ptr {
+				if tarref.Elem().Kind() == reflect.Map {
+					tarref = tarref.Elem()
+				}
+			}
 		}
 
 		//if tarref.CanSet() {
@@ -492,12 +592,31 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	case reflect.Struct:
 		for _, field := range TypeUtiler.GetFieldRecursion(provideTyp) {
 			key := reflect.ValueOf(field.Name)
-			srcfield := getFieldVal(srcref, field)
+			srcfield := func() (x reflect.Value) {
+				if srcref.Kind() == reflect.Map {
+					if ctx.Config.FieldTag != "" {
+						tag, tagok := field.Tag.Lookup(ctx.Config.FieldTag)
+						if tagok == false {
+							x = srcref.MapIndex(reflect.ValueOf(field.Name))
+						} else {
+							x = srcref.MapIndex(reflect.ValueOf(tag))
+						}
+					} else {
+						x = srcref.MapIndex(reflect.ValueOf(field.Name))
+					}
+
+				} else {
+					x = srcref.FieldByName(field.Name)
+				}
+
+				return
+			}()
 			if srcref.Kind() == reflect.Map {
 				if srcfield.IsValid() == false || srcfield.IsNil() {
 					continue
 				}
 			}
+
 			//fmt.Println(prefix+"struct: field=", field.Name, ", fieldtyp=", field.Type)
 			// 获取目标值
 			tarfield := getFieldVal(tarref, field)
@@ -508,7 +627,19 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 
 			switch tarref.Kind() {
 			case reflect.Map:
-				tarref.SetMapIndex(key, retval.Upper())
+				tarref.SetMapIndex(func() (x reflect.Value) {
+					if ctx.Config.FieldTag != "" {
+						tag, tagok := field.Tag.Lookup(ctx.Config.FieldTag)
+						if tagok == false {
+							x = key
+						} else {
+							x = reflect.ValueOf(tag)
+						}
+					} else {
+						x = key
+					}
+					return
+				}(), retval.Upper())
 			case reflect.Struct:
 				if retval.Upper().IsValid() {
 					tarfield.Set(retval.Upper())
@@ -566,21 +697,32 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	case reflect.Func:
 		panic("function not support")
 	default:
+		if tarref.CanSet() == false {
+			return
+		}
 		tarref.Set(func() (x reflect.Value) {
 			// 规定的类型跟源类型不一致的情况
 			if srcref.Type() != provideTyp {
-				switch srcref.Type().Kind() {
-				case reflect.Interface:
-					x = srcref.Elem().Convert(provideTyp)
+				switch provideTyp.Kind() {
+				case reflect.String:
+					x = convert2String(srcref, provideTyp)
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+					fallthrough
+				case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+					x = convert2Int(srcref, provideTyp)
+				case reflect.Float32, reflect.Float64:
+					x = convert2Float(srcref, provideTyp)
+				case reflect.Bool:
+					x = convert2Bool(srcref, provideTyp)
 				default:
-					if provideTyp.Kind().String() == provideTyp.String() {
-						x = srcref.Convert(provideTyp)
-					} else {
-						// 枚举
-						err = errors.New("enum convert function not found")
-						return
-					}
 				}
+				//switch srcref.Type().Kind() {
+				//case reflect.Interface:
+				//	x = srcref.Elem().Convert(provideTyp)
+				//default:
+				//	// 不做处理
+				//	//x = srcref.Convert(provideTyp)
+				//}
 			} else {
 				x = srcref
 			}
@@ -598,71 +740,61 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	return
 }
 
-func Convert2String(ival interface{}) string {
-	val := ""
-	switch x := ival.(type) {
-	case int:
-		val = strconv.Itoa(x)
-	case int8:
-		val = strconv.Itoa(int(x))
-	case int16:
-		val = strconv.Itoa(int(x))
-	case int32:
-		val = strconv.Itoa(int(x))
-	case int64:
-		val = strconv.Itoa(int(x))
-	case uint:
-		val = strconv.Itoa(int(x))
-	case uint8:
-		val = strconv.Itoa(int(x))
-	case uint16:
-		val = strconv.Itoa(int(x))
-	case uint32:
-		val = strconv.Itoa(int(x))
-	case uint64:
-		val = strconv.Itoa(int(x))
-	case float32:
-		val = strconv.Itoa(int(x))
-	case float64:
-		val = strconv.Itoa(int(x))
+func (ctx *Context) callToMethod(srcref reflect.Value, mname string, mtype reflect.Method) (result reflect.Value, err error) {
+	methodVal := srcref.MethodByName(mname)
+	if mtype.Type.NumIn() > 2 {
+		err = errors.New("func " + mname + " NumIn() must 1 or 0")
+		return
 	}
-	return val
+	results := func() (x []reflect.Value) {
+		if mtype.Type.NumIn() == 2 {
+			x = methodVal.Call([]reflect.Value{reflect.ValueOf(ctx)})
+
+		} else {
+			x = methodVal.Call([]reflect.Value{})
+		}
+		return
+	}()
+	// 包含error
+	if mtype.Type.NumOut() > 1 {
+		if results[1].IsNil() == false {
+			err = results[1].Interface().(error)
+			return
+		}
+	}
+	result = results[0]
+	return
 }
 
-func Convert2Int(ival interface{}) int {
-	val := int(0)
-	switch data := ival.(type) {
-	case int:
-		val = int(data)
-	case int8:
-		val = int(data)
-	case int16:
-		val = int(data)
-	case int32:
-		val = int(data)
-	case int64:
-		val = int(data)
-	case uint:
-		val = int(data)
-	case uint8:
-		val = int(data)
-	case uint16:
-		val = int(data)
-	case uint32:
-		val = int(data)
-	case uint64:
-		val = int(data)
-	case float32:
-		val = int(data)
-	case float64:
-		val = int(data)
-	case string:
-		i, err := strconv.Atoi(data)
-		if err != nil {
-			panic(err)
-		}
-		val = int(i)
+func (ctx *Context) callFromMethod(srcref, tarref reflect.Value, mname string, mtype reflect.Method) (result reflect.Value, err error) {
+	methodVal := tarref.MethodByName(mname)
+	if mtype.Type.NumIn() > 3 || mtype.Type.NumIn() == 1 {
+		err = errors.New("func " + mname + " NumIn() must 2 or 1")
+		return
 	}
 
-	return val
+	results := func() (x []reflect.Value) {
+		if mtype.Type.NumIn() == 3 {
+			x = methodVal.Call([]reflect.Value{reflect.ValueOf(ctx), srcref})
+		} else {
+			x = methodVal.Call([]reflect.Value{srcref})
+		}
+		return
+	}()
+
+	if mtype.Type.NumOut() > 0 {
+		if tarref.Kind() == reflect.Ptr {
+			if results[0].IsNil() == false {
+				err = results[0].Interface().(error)
+				return
+			}
+		} else {
+			tarref.Set(results[0])
+		}
+		result = results[0]
+	} else {
+		result = tarref
+	}
+
+	return
 }

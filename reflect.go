@@ -11,7 +11,7 @@ var (
 	stringTyp = reflect.TypeOf("")
 )
 
-func NewTypeMap(types []reflect.Type) (r TypeMap) {
+func NewTypeMap(types ...reflect.Type) (r TypeMap) {
 	r = TypeMap{}
 	for _, val := range types {
 		r[val.Name()] = val
@@ -71,7 +71,6 @@ func (val Value) parseMapType(ctx *Context) (x reflect.Type, err error) {
 		if srcok == false {
 			return
 		}
-		delete(src, "_type")
 
 		str := istr.(string)
 		t, typok := ctx.typeMap[str]
@@ -79,11 +78,16 @@ func (val Value) parseMapType(ctx *Context) (x reflect.Type, err error) {
 			return
 		}
 
+		delete(src, "_type")
 		y = t
 		return
 	}()
 	// 处理指针
+
 	isPtr := func() (x bool) {
+		if sttype == nil {
+			return false
+		}
 		istr, ok := src["_ptr"]
 		if ok == false {
 			return false
