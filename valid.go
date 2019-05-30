@@ -29,38 +29,6 @@ func (ctx *Context) valid(source Value, provideTyp reflect.Type, depth int) (err
 			srcref = srcref.Elem()
 		}
 	}
-
-	mname := "Valid"
-	mtype, ok := srcref.Type().MethodByName(mname)
-	if ok == true {
-		methodVal := srcref.MethodByName(mname)
-		if mtype.Type.NumIn() > 2 {
-			err = errors.New("func " + mname + " NumIn() must 1 or 0")
-			return
-		}
-		results := func() (x []reflect.Value) {
-			if mtype.Type.NumIn() == 2 {
-				x = methodVal.Call([]reflect.Value{reflect.ValueOf(ctx)})
-
-			} else {
-				x = methodVal.Call([]reflect.Value{})
-			}
-			return
-		}()
-		// 包含error
-		if mtype.Type.NumOut() > 0 {
-			if results[0].Type().Kind() == reflect.Bool {
-				if results[0].Bool() == false {
-					err = errors.New("not true")
-				}
-			} else { // error
-				if results[0].IsNil() == false {
-					err = results[0].Interface().(error)
-				}
-			}
-			return
-		}
-	}
 	//fmt.Println("last target=", tarref, tarref.Type(), tarref.CanSet())
 
 	switch provideTyp.Kind() {
@@ -123,6 +91,37 @@ func (ctx *Context) valid(source Value, provideTyp reflect.Type, depth int) (err
 	default:
 	}
 
+	mname := "Valid"
+	mtype, ok := srcref.Type().MethodByName(mname)
+	if ok == true {
+		methodVal := srcref.MethodByName(mname)
+		if mtype.Type.NumIn() > 2 {
+			err = errors.New("func " + mname + " NumIn() must 1 or 0")
+			return
+		}
+		results := func() (x []reflect.Value) {
+			if mtype.Type.NumIn() == 2 {
+				x = methodVal.Call([]reflect.Value{reflect.ValueOf(ctx)})
+
+			} else {
+				x = methodVal.Call([]reflect.Value{})
+			}
+			return
+		}()
+		// 包含error
+		if mtype.Type.NumOut() > 0 {
+			if results[0].Type().Kind() == reflect.Bool {
+				if results[0].Bool() == false {
+					err = errors.New("failed")
+				}
+			} else { // error
+				if results[0].IsNil() == false {
+					err = results[0].Interface().(error)
+				}
+			}
+			return
+		}
+	}
 	//fmt.Println("resut >", result.Upper())
 	return
 }

@@ -2,7 +2,7 @@ package stcopy
 
 import (
 	"errors"
-	"fmt"
+	"github.com/cathalgarvey/fmtless"
 	"testing"
 )
 
@@ -14,6 +14,13 @@ type ValidClass struct {
 	ArrayB []TypeB
 
 	MapB map[string]TypeB
+}
+
+func (v *ValidClass) Valid() (err error) {
+	if v.B != 200 {
+		err = errors.New("not 200")
+	}
+	return
 }
 
 type ValidA struct {
@@ -43,12 +50,12 @@ func TestContext_Valid(t *testing.T) {
 		//nil,
 		//&ValidClass{A: &ValidA{PropInt: 100}},
 		//"A: out of range",
-		//&ValidClass{B: TypeB(100)},
-		//"B: out of range",
+		&ValidClass{B: TypeB(100)},
+		"B: failed",
 		//&ValidClass{ArrayB: []TypeB{TypeB(0), TypeB(100)}},
 		//"ArrayB: at 1: out of range",
-		&ValidClass{MapB: map[string]TypeB{"1": TypeB(0), "2": TypeB(100)}},
-		"MapB: at 2: not true",
+		//&ValidClass{MapB: map[string]TypeB{"1": TypeB(0), "2": TypeB(100)}},
+		//"MapB: at 2: failed",
 	}
 
 	for i := 0; i < len(sources); i += 2 {
@@ -59,10 +66,11 @@ func TestContext_Valid(t *testing.T) {
 				panic("")
 			}
 		} else {
+			fmt.Println("valid_test[43]>", New(source).Valid())
 			if New(source).Valid() == nil {
 				panic("")
 			}
-			fmt.Println("valid_test[43]>", New(source).Valid().Error())
+
 			if New(source).Valid().Error() != result {
 				panic("")
 			}
