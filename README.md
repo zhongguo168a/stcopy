@@ -33,7 +33,7 @@ go get github.com/zhongguo168a/stcopy
 
 为了方便描述, 约定以下概念
 
-* json map: 约定通过stcopy输出的map, 与encoding/json.Unmarshal方法, 生成的map类型一致
+* json map: 约定通过stcopy输出的map, 与encoding/json.Unmarshal方法生成的map类型一致
 * ValueA/ValueB stcopy.New(ValueA).To/From(ValueB), 进行复制时的两个对象
 
 
