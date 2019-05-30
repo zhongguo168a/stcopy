@@ -2,6 +2,25 @@
 拷贝一个对象至另一个对象, 对象与对象的类型可以不一致, 尽量保存结构的类型信息, 以便反向转换
 
 
+#### 应用场景:
+
+* 基本用法
+    * 拷贝一个map/struct到另一个map/struct, 由于stcopy提供了预转换的方法, 可减少使用时, 每次都转换的麻烦
+    * 验证结构字段是否合法
+    
+* 实用场景
+    * 通讯协议的转换和验证
+        * json协议先转换成对应的结构, 然后进行验证
+        * grpc协议可转换成对应的结构, 然后进行验证
+        * ...
+    * 配置数据的转换       
+        * 使用json/xml配置数据, 解析成map后, 转换成对应的结构
+        * ...
+    * 数据库数据的转换
+        * 从数据库中获取数据后, 转换成对应的结构, 可进行验证
+        * 编写orm的时候可以使用
+        * ...
+
 #### 安装
 go get github.com/zhongguo168a/stcopy
 
@@ -45,13 +64,6 @@ go get github.com/zhongguo168a/stcopy
     * 如果没有设置, 默认使用reflect.Convert方法来转化, 可参考单元测试中, 带Convert的方法 
 * 如果字段中存在不需要/无法拷贝的类型(例如time.Time), 可以通过设置BaseTypes, 像int类型一样, 直接赋值过去 
 * 提供了valid()方法, 深度优先, 递归遍历所有字段的valid()方法(如果存在)
-
-  	  
-#### 应用场景:
-
-* copy map to/from json map
-* copy struct to/from json map
-* copy struct to/from struct 
 
 
 #### 例子
