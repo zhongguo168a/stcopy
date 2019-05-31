@@ -25,7 +25,7 @@ const (
 	TestEnum_A2
 )
 
-func (s TestEnum) ToString(ctx *Context) (r string) {
+func (s TestEnum) To(ctx *Context) (r string) {
 	switch s {
 	case TestEnum_A1:
 		return "A1"
@@ -35,7 +35,7 @@ func (s TestEnum) ToString(ctx *Context) (r string) {
 	return
 }
 
-func (s TestEnum) FromString(ctx *Context, val string) (e TestEnum, err error) {
+func (s TestEnum) From(ctx *Context, val string) (e TestEnum, err error) {
 	switch val {
 	case "A1":
 		return TestEnum_A1, nil
@@ -80,7 +80,7 @@ type ClassConvert struct {
 
 type ClassConvert2 struct {
 	Convert string
-	Enum    int
+	Enum    string
 }
 
 type ClassMap struct {
@@ -107,7 +107,7 @@ type Convert struct {
 	Int int16
 }
 
-func (s *Convert) To(ctx *Context) (r interface{}) {
+func (s *Convert) To(ctx *Context) (r string) {
 	b, _ := json.Marshal(s)
 	r = string(b)
 	return
@@ -115,20 +115,6 @@ func (s *Convert) To(ctx *Context) (r interface{}) {
 
 func (s *Convert) From(ctx *Context, val interface{}) (err error) {
 	err = json.Unmarshal([]byte(val.(string)), &s)
-	if err != nil {
-		return
-	}
-	return
-}
-
-func (s *Convert) ToString(ctx *Context) (r string) {
-	b, _ := json.Marshal(s)
-	r = string(b)
-	return
-}
-
-func (s *Convert) FromString(ctx *Context, val string) (err error) {
-	err = json.Unmarshal([]byte(val), &s)
 	if err != nil {
 		return
 	}
@@ -151,11 +137,11 @@ type ConvertString string
 
 type ConvertDefine int
 
-func (s ConvertDefine) ToString() (r string) {
+func (s ConvertDefine) To() (r string) {
 	return strconv.Itoa(int(s))
 }
 
-func (s ConvertDefine) FromString(val string) (r ConvertDefine, err error) {
+func (s ConvertDefine) From(val string) (r ConvertDefine, err error) {
 	t, err := strconv.Atoi(val)
 	if err != nil {
 		return
@@ -257,10 +243,6 @@ func TestCopyStructToStructCombination(t *testing.T) {
 		&ClassCombination{ClassBase: ClassBase{String: "test 1", Int: 1}}, // source
 		&ClassCombination{}, // target
 		&ClassCombination{ClassBase: ClassBase{String: "test 1", Int: 1}}, // result
-		// next
-		//&Class2{String: &Convert{Int: 3}, Int: 2}, // target
-		//&ClassBase{Int: 1},                      // target
-		//&ClassBase{String: `{"Int":3}`, Int: 1}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
@@ -304,9 +286,9 @@ func TestCopyStructToStruct(t *testing.T) {
 func TestCopyStructToStructConvert(t *testing.T) {
 
 	sources := []interface{}{
-		&ClassConvert{Convert: &Convert{Int: 100}, Enum: TestEnum(100)}, // source
-		&ClassConvert2{Convert: `{"Int":99}`, Enum: 99},                 // target
-		&ClassConvert2{Convert: `{"Int":100}`, Enum: 100},               // result
+		&ClassConvert{Convert: &Convert{Int: 100}, Enum: TestEnum_A1}, // source
+		&ClassConvert2{Convert: `{"Int":99}`, Enum: "A2"},             // target
+		&ClassConvert2{Convert: `{"Int":100}`, Enum: "A1"},            // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
@@ -370,17 +352,17 @@ func TestCopyMapToStructBase(t *testing.T) {
 
 func TestCopyStructFromMapConvert(t *testing.T) {
 	sources := []interface{}{
-		//&map[string]interface{}{"Convert": `{"Int":100}`},              // source
-		//&ClassConvert{Convert: &Convert{Int: 99}, Enum: TestEnum(99)},  // target
-		//&ClassConvert{Convert: &Convert{Int: 100}, Enum: TestEnum(99)}, // result
+		&map[string]interface{}{"Convert": `{"Int":100}`},              // source
+		&ClassConvert{Convert: &Convert{Int: 99}, Enum: TestEnum(99)},  // target
+		&ClassConvert{Convert: &Convert{Int: 100}, Enum: TestEnum(99)}, // result
 		// next
 		//&map[string]interface{}{"Enum": 100}, // source
 		//&ClassConvert{Enum: TestEnum(99)},    // target
 		//&ClassConvert{Enum: TestEnum(100)},   // result
-		// next
-		&map[string]interface{}{"ConvertDefine": "100"},                      // source
-		&ClassConvert{ConvertDefine: ConvertDefine(99), Enum: TestEnum(99)},  // target
-		&ClassConvert{ConvertDefine: ConvertDefine(100), Enum: TestEnum(99)}, // result
+		//// next
+		//&map[string]interface{}{"ConvertDefine": "100"},                      // source
+		//&ClassConvert{ConvertDefine: ConvertDefine(99), Enum: TestEnum(99)},  // target
+		//&ClassConvert{ConvertDefine: ConvertDefine(100), Enum: TestEnum(99)}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
@@ -392,7 +374,8 @@ func TestCopyStructFromMapConvert(t *testing.T) {
 		debugutil.PrintJson("result=", sources[i+2])
 		debugutil.PrintJson("target=", sources[i+1])
 		if reflect.DeepEqual(sources[i+2], sources[i+1]) == false {
-			t.Error("not equal")
+			t.Error("not equal: ", i)
+			break
 		}
 	}
 }
@@ -401,9 +384,9 @@ func TestCopyStructToMapConvert(t *testing.T) {
 
 	sources := []interface{}{
 		//
-		&ClassConvert{Convert: &Convert{Int: 100}}, // source
-		&map[string]interface{}{},                  // target
-		&map[string]interface{}{"Convert": "{\"Int\":100}", "Enum": 0.0, "ConvertDefine": 0.0}, // result
+		&ClassConvert{Convert: &Convert{Int: 100}, ConvertDefine: ConvertDefine(200), Enum: TestEnum_A1}, // source
+		&map[string]interface{}{}, // target
+		&map[string]interface{}{"Convert": "{\"Int\":100}", "Enum": "A1", "ConvertDefine": "200"}, // result
 		//
 		&ClassBase{Bytes: []byte("test")},           // source
 		&map[string]interface{}{"String": "test 1"}, // target

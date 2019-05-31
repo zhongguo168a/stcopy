@@ -3,9 +3,11 @@ package stcopy
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"github.com/zhongguo168a/gocodes/utils/stringutil"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 func isHard(k reflect.Kind) bool {
@@ -111,17 +113,17 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	srcref := source.Upper()
 	tarref := target.Upper()
 	//
-	//prefix := strings.Repeat("----", depth)
-	//fmt.Println(prefix+"> copy:", "provide typ=", provideTyp, "kind=", provideTyp.Kind())
-	//fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref)
-	//fmt.Println(prefix+"copy: tartyp=", target.GetTypeString(), "tar=", tarref, "nil=", ",  canset=", tarref.CanSet(), func() (x string) {
-	//	if isHard(tarref.Kind()) && tarref.IsNil() {
-	//		x = "isnil=true"
-	//	} else {
-	//		x = "isnil=false"
-	//	}
-	//	return
-	//}())
+	prefix := strings.Repeat("----", depth)
+	fmt.Println(prefix+"> copy:", "provide typ=", provideTyp, "kind=", provideTyp.Kind())
+	fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref)
+	fmt.Println(prefix+"copy: tartyp=", target.GetTypeString(), "tar=", tarref, "nil=", ",  canset=", tarref.CanSet(), func() (x string) {
+		if isHard(tarref.Kind()) && tarref.IsNil() {
+			x = "isnil=true"
+		} else {
+			x = "isnil=false"
+		}
+		return
+	}())
 	//
 	// 源是否空
 	if srcref.IsValid() == false {
@@ -203,14 +205,14 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 			}
 		}
 
-		//fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref, ",  canset=", srcref.CanSet(), func() (x string) {
-		//	if isHard(srcref.Kind()) && srcref.IsNil() {
-		//		x = "isnil=true"
-		//	} else {
-		//		x = "isnil=false"
-		//	}
-		//	return
-		//}(), "<last>")
+		fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref, ",  canset=", srcref.CanSet(), func() (x string) {
+			if isHard(srcref.Kind()) && srcref.IsNil() {
+				x = "isnil=true"
+			} else {
+				x = "isnil=false"
+			}
+			return
+		}(), "<last>")
 	}
 
 	// 检查目标是否需要创建新的值
@@ -263,7 +265,6 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 				case StructToStruct:
 					x = reflect.MakeSlice(provideTyp, srcref.Len(), srcref.Cap())
 				case JsonMapToStruct:
-
 					if srcref.Kind() == reflect.Map { // 处理来源为map的情况
 						var max = 0
 						for _, key := range srcref.MapKeys() {
@@ -365,66 +366,40 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 		target = Value(tarref)
 	}
 
-	//fmt.Println(prefix+"copy: tartyp=", tarref.Type(), "tar=", tarref, ",  canset=", tarref.CanSet(), func() (x string) {
-	//	if isHard(tarref.Kind()) && tarref.IsNil() {
-	//		x = "isnil=true"
-	//	} else {
-	//		x = "isnil=false"
-	//	}
-	//	return
-	//}(), "<last>")
+	fmt.Println(prefix+"copy: tartyp=", tarref.Type(), "tar=", tarref, ",  canset=", tarref.CanSet(), func() (x string) {
+		if isHard(tarref.Kind()) && tarref.IsNil() {
+			x = "isnil=true"
+		} else {
+			x = "isnil=false"
+		}
+		return
+	}(), "<last>")
 	//
+
 	// 如果源与目标的类型不一致
-	// 0层不可以convert, 请直接调用Convert函数处理
-	if depth != 0 && reflect.Indirect(srcref).Kind() != reflect.Indirect(tarref).Kind() {
-		switch ctx.direction {
-		case AtoB:
-			mname := "To" + ctx.getMethodType(tarref)
-			mtype, ok := srcref.Type().MethodByName(mname)
+	switch ctx.direction {
+	case AtoB:
+		mtype, ok := srcref.Type().MethodByName("To")
+		if ok == true {
+			r, callerr := ctx.callToMethod(srcref, "To", mtype)
+			if callerr != nil {
+				err = callerr
+				return
+			}
+			result = Value(r)
+			return
+		}
+	case AfromB:
+		if tarref.IsValid() == true {
+			mtype, ok := tarref.Type().MethodByName("From")
 			if ok == true {
-				r, callerr := ctx.callToMethod(srcref, mname, mtype)
+				r, callerr := ctx.callFromMethod(srcref, tarref, "From", mtype)
 				if callerr != nil {
 					err = callerr
 					return
 				}
 				result = Value(r)
 				return
-			}
-
-			mtype, ok = srcref.Type().MethodByName("To")
-			if ok == true {
-				r, callerr := ctx.callToMethod(srcref, "To", mtype)
-				if callerr != nil {
-					err = callerr
-					return
-				}
-				result = Value(r)
-				return
-			}
-		case AfromB:
-			if tarref.IsValid() == true {
-				mname := "From" + ctx.getMethodType(srcref)
-				mtype, ok := tarref.Type().MethodByName(mname)
-				if ok == true {
-					r, callerr := ctx.callFromMethod(srcref, tarref, mname, mtype)
-					if callerr != nil {
-						err = callerr
-						return
-					}
-					result = Value(r)
-					return
-				}
-
-				mtype, ok = tarref.Type().MethodByName("From")
-				if ok == true {
-					r, callerr := ctx.callFromMethod(srcref, tarref, "From", mtype)
-					if callerr != nil {
-						err = callerr
-						return
-					}
-					result = Value(r)
-					return
-				}
 			}
 		}
 	}
@@ -617,7 +592,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 				}
 			}
 
-			//fmt.Println(prefix+"struct: field=", field.Name, ", fieldtyp=", field.Type)
+			fmt.Println(prefix+"struct: field=", field.Name, ", fieldtyp=", field.Type)
 			// 获取目标值
 			tarfield := getFieldVal(tarref, field)
 			retval, err = ctx.copy(Value(srcfield), Value(tarfield), field.Type, inInterface, depth+1)
@@ -784,18 +759,32 @@ func (ctx *Context) callFromMethod(srcref, tarref reflect.Value, mname string, m
 		return
 	}()
 
-	if mtype.Type.NumOut() > 0 {
-		if tarref.Kind() == reflect.Ptr {
-			if results[0].IsNil() == false {
+	switch mtype.Type.NumOut() {
+	case 0:
+		result = tarref
+	case 1:
+
+		if mtype.Type.Out(0).Implements(errTyp) {
+			if tarref.Kind() != reflect.Ptr {
+				err = errors.New("目标非指针类型, 必须返回运行结果")
+				return
+			}
+			if results[0].IsNil() == false { // From返回错误
 				err = results[0].Interface().(error)
 				return
 			}
+			result = tarref
 		} else {
-			tarref.Set(results[0])
+			result = results[0]
 		}
+
+	case 2:
+		if results[1].IsNil() == false { // From返回错误
+			err = results[1].Interface().(error)
+			return
+		}
+
 		result = results[0]
-	} else {
-		result = tarref
 	}
 
 	return

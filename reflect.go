@@ -7,6 +7,7 @@ import (
 )
 
 var (
+	errTyp    = reflect.TypeOf((*error)(nil)).Elem()
 	bytesTyp  = reflect.TypeOf([]byte{})
 	stringTyp = reflect.TypeOf("")
 )
@@ -29,14 +30,10 @@ func (m TypeMap) GetKeys() (keys []string) {
 	return
 }
 
-func (m TypeMap) AddList(list []reflect.Type) {
-	for _, val := range list {
-		m.Add(val)
+func (m TypeMap) Add(types ...reflect.Type) {
+	for _, val := range types {
+		m[val.Name()] = val
 	}
-}
-
-func (m TypeMap) Add(val reflect.Type) {
-	m[val.Name()] = val
 }
 
 type Value reflect.Value

@@ -24,9 +24,10 @@ func convert2Int(val reflect.Value, typ reflect.Type) (r reflect.Value) {
 	case reflect.String:
 		i, err := strconv.Atoi(val.Interface().(string))
 		if err != nil {
-			panic(err)
+			r = reflect.ValueOf(0)
+		} else {
+			r = reflect.ValueOf(i)
 		}
-		r = reflect.ValueOf(i)
 	default:
 		if val.Type().ConvertibleTo(typ) {
 			r = val
@@ -44,9 +45,10 @@ func convert2Float(val reflect.Value, typ reflect.Type) (r reflect.Value) {
 	case reflect.String:
 		i, err := strconv.ParseFloat(val.Interface().(string), 64)
 		if err != nil {
-			panic(err)
+			r = reflect.ValueOf(0)
+		} else {
+			r = reflect.ValueOf(i)
 		}
-		r = reflect.ValueOf(i)
 	default:
 		if val.Type().ConvertibleTo(typ) {
 			r = val
