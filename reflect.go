@@ -4,6 +4,7 @@ import (
 	"errors"
 	"reflect"
 	"sort"
+	"strings"
 )
 
 var (
@@ -212,14 +213,25 @@ func (*typeUtil) UnfoldType(typ reflect.Type) reflect.Type {
 	return typ
 }
 
+func (*typeUtil) HasTagIgnore(field reflect.StructField) bool {
+	flags, has := field.Tag.Lookup("stcopy")
+	if has == false {
+		return false
+	}
+
+	return strings.Contains(flags, "ignore")
+}
+
 // 获取
 func (sv *typeUtil) GetFieldRecursion(typ reflect.Type) (r []*reflect.StructField) {
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
 		switch field.Type.Kind() {
 		case reflect.Struct:
+			if TypeUtiler.HasTagIgnore(field) {
+				continue
+			}
 			if field.Anonymous == true {
-
 				r = append(r, sv.GetFieldRecursion(field.Type)...)
 			} else {
 				r = append(r, &field)

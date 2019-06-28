@@ -563,7 +563,6 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 		//}
 	case reflect.Struct:
 		for _, field := range TypeUtiler.GetFieldRecursion(provideTyp) {
-
 			if stringutil.IsLowerFirst(field.Name) {
 				// 私有变量不作处理
 				continue

@@ -68,6 +68,12 @@ type ClassBase struct {
 	local int
 }
 
+type ClassIgnore struct {
+	ClassBase `stcopy:"ignore"`
+
+	String string
+}
+
 type ClassCombination struct {
 	ClassBase
 	ClassStruct
@@ -424,6 +430,31 @@ func TestCopyStructToMapBase(t *testing.T) {
 		&ClassBase{Bytes: []byte("test"), Int: 1, ConvertString: ConvertString("convert string")},                                                           // source
 		&map[string]interface{}{"String": "test 2", "Int": 2.0, "Bool": true},                                                                               // target
 		&map[string]interface{}{"Bytes": "dGVzdA==", "String": "", "Int": 1.0, "Float": 0.0, "Uint": 0.0, "Bool": false, "ConvertString": "convert string"}, // result
+	}
+
+	for i := 0; i < len(sources); i += 3 {
+		err := New(sources[i]).WithBaseTypes(baseTypes).To(sources[i+1])
+		if err != nil {
+			t.Error("stcopy: " + err.Error())
+			return
+		}
+
+		debugutil.PrintJson("result=", sources[i+2])
+		debugutil.PrintJson("target=", sources[i+1])
+
+		if reflect.DeepEqual(sources[i+2], sources[i+1]) == false {
+			t.Error("not equal")
+			break
+		}
+	}
+}
+
+func TestCopyStructToMapIgnore(t *testing.T) {
+
+	sources := []interface{}{
+		&ClassIgnore{ClassBase: ClassBase{Bytes: []byte("test"), Int: 1, ConvertString: ConvertString("convert string")}, String: "test ignore"}, // source
+		&map[string]interface{}{},                        // target
+		&map[string]interface{}{"String": "test ignore"}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
