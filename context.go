@@ -99,6 +99,8 @@ type Config struct {
 	// 转换成map时, 检查FieldTag定义的名字, 例如json/bson, 根据FieldTag转换成对应的Field名字
 	// 例如在Id 字段 定义了bson:"_id", 转换后的map["Id"] 变成 map["_id"]
 	FieldTag string
+	// 当转化成map时, 是否总是携带结构信息, 包括_type和_ptr
+	AlwaysStructInfo bool
 }
 
 func (ctx *Context) getProvideTyp(src, tar Value) (typ reflect.Type, err error) {

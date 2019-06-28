@@ -72,6 +72,7 @@ func (val Value) parseMapType(ctx *Context) (x reflect.Type, err error) {
 		str := istr.(string)
 		t, typok := ctx.typeMap[str]
 		if typok == false {
+			println("stcopy: parse map type: not found: " + str)
 			return
 		}
 
