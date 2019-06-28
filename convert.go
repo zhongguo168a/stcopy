@@ -6,15 +6,22 @@ import (
 )
 
 func convert2String(val reflect.Value, typ reflect.Type) (r reflect.Value) {
+
 	switch val.Kind() {
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		r = reflect.ValueOf(strconv.Itoa(int(val.Uint())))
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		r = reflect.ValueOf(strconv.Itoa(int(val.Int())))
+	case reflect.Float32, reflect.Float64:
+		r = reflect.ValueOf(strconv.FormatFloat(val.Float(), 'f', -1, 64))
 	default:
 		if val.Type().ConvertibleTo(typ) {
-			r = val
+			r = val.Convert(typ)
 		} else {
 			r = reflect.ValueOf("")
 		}
+
 	}
-	r = r.Convert(typ)
 	return
 }
 
@@ -45,7 +52,7 @@ func convert2Float(val reflect.Value, typ reflect.Type) (r reflect.Value) {
 	case reflect.String:
 		i, err := strconv.ParseFloat(val.Interface().(string), 64)
 		if err != nil {
-			r = reflect.ValueOf(0)
+			r = reflect.ValueOf(0.0)
 		} else {
 			r = reflect.ValueOf(i)
 		}
@@ -53,7 +60,7 @@ func convert2Float(val reflect.Value, typ reflect.Type) (r reflect.Value) {
 		if val.Type().ConvertibleTo(typ) {
 			r = val
 		} else {
-			r = reflect.ValueOf(0)
+			r = reflect.ValueOf(0.0)
 		}
 	}
 
@@ -66,7 +73,9 @@ func convert2Bool(val reflect.Value, typ reflect.Type) (r reflect.Value) {
 	case reflect.String:
 		data := val.Interface().(string)
 		if data == "true" || data == "1" {
-			val = reflect.ValueOf(true)
+			r = reflect.ValueOf(true)
+		} else {
+			r = reflect.ValueOf(false)
 		}
 	default:
 		if val.Type().ConvertibleTo(typ) {
