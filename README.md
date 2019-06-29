@@ -77,12 +77,12 @@ func main(){
     m1 := map[string]interface{}{}
     m2 := map[string]interface{}{}
     // 相同结构之间的拷贝
-	stcopy.New(a1).To(a2) // a2={Int:100} 
-	stcopy.New(a2).From(a1) // a2={Int:100}
-	// 不同结构之间的拷贝
-	stcopy.New(a1).To(b) // b={Int:100, String:"Keep"} // Int被修改, String保留
-	stcopy.New(b).From(a2) // b={Int:100, String:"Keep"}
-	// 结构拷贝至map, 保存结构信息, 当存在interface{}属性时, 可完整还原成结构
+    stcopy.New(a1).To(a2) // a2={Int:100} 
+    stcopy.New(a2).From(a1) // a2={Int:100}
+    // 不同结构之间的拷贝
+    stcopy.New(a1).To(b) // b={Int:100, String:"Keep"} // Int被修改, String保留
+    stcopy.New(b).From(a2) // b={Int:100, String:"Keep"}
+    // 结构拷贝至map, 保存结构信息, 当存在interface{}属性时, 可完整还原成结构
     stcopy.New(a1).To(m1) // m1={Int:100, "_ptr":true, "_type":"A"}
     // map之间的拷贝 
     stcopy.New(m2).From(m1) // m2={Int:100, "_ptr":true, "_type":"A"}
@@ -100,10 +100,10 @@ type A struct{
 }
 
 func main(){
-	a := &A{Id:"testId"}
+    a := &A{Id:"testId"}
     m := map[string]interface{}{}
-	stcopy.New(a).WithFieldTag("bson").To(&m) 
-	// m={"_id":"testId"}
+    stcopy.New(a).WithFieldTag("bson").To(&m) 
+    // m={"_id":"testId"}
 }
 ```
 * 对于类型不一致的情况
@@ -119,8 +119,8 @@ func main(){
 // ignore标签与深度优先的例子
 package main
 import (
-	"github.com/zhongguo168a/stcopy"
-	"strings"
+    "github.com/zhongguo168a/stcopy"
+    "strings"
 )
 
 type Config struct {
@@ -133,19 +133,19 @@ type Config struct {
     St *Struct // 没有忽略
 }
 func (c *Config) OnCopyed() {// 深度优先, 最后执行, Valid()方法同理
-	c.States = strings.Split(c.State, "|")
-	c.St.Int = c.St.Int * 2 // 20 * 2 = 40
+    c.States = strings.Split(c.State, "|")
+    c.St.Int = c.St.Int * 2 // 20 * 2 = 40
 }
 
 type Cache struct {
-	// 缓存的属性
-	States []string // 结果=[]string{"A", "B", "C"}
+    // 缓存的属性
+    States []string // 结果=[]string{"A", "B", "C"}
 }
 
 type Struct struct{
     Int int // 初始值 = 10
-	// 
-	IgnoreField interface{} `stcopy:"ignore"` // 结构内部也可以使用
+    // 被忽略的属性
+    IgnoreField interface{} `stcopy:"ignore"` // 结构内部也可以使用
 }
 
 func (s *Struct) OnCopyed() {// 深度优先, 首先执行, Valid()方法同理
