@@ -90,7 +90,7 @@ func main(){
 ```
 * 如果map中存在_type字段, 需要通过WithTypeMap()方法, 增加该结构的反射信息, 才能正确转换成对应的结构
     * 如果没有, 则拷贝一份map
-* 可通过配置中的FieldTag参数, 修改字段的名字
+* 可通过配置中的WithFieldTag()方法, 修改输出到map后, 字段的名字
 ```go
 package main
 import "github.com/zhongguo168a/stcopy"
