@@ -152,4 +152,5 @@ func (ctx *Context) WithConfig(val *Config) *Context {
 
 func (ctx *Context) WithFieldTag(tag string) *Context {
 	ctx.Config.FieldTag = tag
+	return ctx
 }
