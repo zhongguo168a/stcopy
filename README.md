@@ -8,7 +8,7 @@
 * 基本用法
     * 深度拷贝/覆盖一个map/struct到另一个map/struct, 由于stcopy提供了预转换的方法, 可减少使用时, 每次都转换的麻烦
     * 通过map修改struct: 设置了键值, 会修改对应键值的struct
-    * 验证结构字段是否合法
+    * 验证结构属性是否合法
     * 不包含fmt和json包, 可用于转换成js的场景
     
 * 实用场景
@@ -38,7 +38,7 @@ go get github.com/zhongguo168a/stcopy
 * ValueA/ValueB stcopy.New(ValueA).To/From(ValueB), 进行复制时的两个对象
 
 
-#### 字段类型对应的关系如下:
+#### 属性类型对应的关系如下:
 
 | Golang        |   json map|
 |:-------------:| -----:|
@@ -55,7 +55,7 @@ go get github.com/zhongguo168a/stcopy
 
 #### 已实现功能
 
-* 拷贝或者覆盖目标相同字段的值, 目标未覆盖的字段值会保留. 可通过新建目标对象实现完整拷贝
+* 拷贝或者覆盖目标相同属性的值, 目标未覆盖的属性值会保留. 可通过新建目标对象实现完整拷贝
 ```go
 package main
 import "github.com/zhongguo168a/stcopy"
@@ -82,15 +82,15 @@ func main(){
 	// 不同结构之间的拷贝
 	stcopy.New(a1).To(b) // b={Int:100, String:"Keep"} // Int被修改, String保留
 	stcopy.New(b).From(a2) // b={Int:100, String:"Keep"}
-	// 结构拷贝至map, 保存结构信息, 当存在interface{}字段时, 可完整还原成结构
+	// 结构拷贝至map, 保存结构信息, 当存在interface{}属性时, 可完整还原成结构
     stcopy.New(a1).To(m1) // m1={Int:100, "_ptr":true, "_type":"A"}
     // map之间的拷贝 
     stcopy.New(m2).From(m1) // m2={Int:100, "_ptr":true, "_type":"A"}
 }
 ```
-* 如果map中存在_type字段, 需要通过WithTypeMap()方法, 增加该结构的反射信息, 才能正确转换成对应的结构
+* 如果map中存在_type属性, 需要通过WithTypeMap()方法, 增加该结构的反射信息, 才能正确转换成对应的结构
     * 如果没有, 则拷贝一份map
-* 可通过配置中的WithFieldTag()方法, 修改输出到map后, 字段的名字
+* 可通过配置中的WithFieldTag()方法, 修改输出到map后, 属性的名字
 ```go
 package main
 import "github.com/zhongguo168a/stcopy"
@@ -111,10 +111,32 @@ func main(){
     * 可通过WithParams()方法, 在ctx中获取params, 实现不同场景的转换
     * 如果没有设置To/From, 默认使用reflect.Convert方法来转化
     * 遇到转换成目标类型, 返回错误
-* 如果字段中存在不需要/无法拷贝的类型(例如time.Time), 可以通过设置BaseTypes, 像int类型一样, 直接赋值过去 
-* 可使用tag: stcopy:"ignore", 忽略该字段的拷贝
-* 提供了Valid()方法, 深度优先, 遍历所有字段的Valid()方法(如果存在)
-* 执行To/Frome方法时, 深度优先, 遍历所有字段的OnCreated()方法(如果存在) 
+* 如果属性中存在不需要/无法拷贝的类型(例如time.Time), 可以通过设置BaseTypes, 像int类型一样, 直接赋值过去 
+* 可使用tag: stcopy:"ignore", 忽略该属性的拷贝
+```go
+package main
+import (
+	"github.com/zhongguo168a/stcopy"
+	"strings"
+)
+
+type Config struct {
+    Cache `stcopy:"ignore"` // 解析时Cache里面的属性会被忽略, 然后通过OnCopyed()方法对属性State进行处理
+    // 配置属性
+    State string // 初始值="A|B|C"
+}
+func (c *Config) OnCopyed() { // 首先进入
+	c.States = strings.Split(c.State, "|")
+}
+
+type Cache struct {
+	//
+	States []string
+}
+```
+
+* 提供了Valid()方法, 深度优先, 遍历所有属性的Valid()方法(如果存在)
+* 执行To/From方法时, 深度优先, 遍历所有属性的OnCopyed()方法(如果存在) 
 ```go
 package main
 import (
