@@ -58,9 +58,8 @@ go get github.com/zhongguo168a/stcopy
 * 拷贝或者覆盖目标相同字段的值, 目标未覆盖的字段值会保留. 可通过新建目标对象实现完整拷贝
 ```go
 package main
-import (
-	"github.com/zhongguo168a/stcopy"
-)
+import "github.com/zhongguo168a/stcopy"
+
 type A struct{
     Int int
     String string
@@ -80,7 +79,7 @@ func main(){
     // 相同结构之间的拷贝
 	stcopy.New(a1).To(a2) // a2={Int:100} 
 	stcopy.New(a2).From(a1) // a2={Int:100}
-	// 不同结构知之间的拷贝
+	// 不同结构之间的拷贝
 	stcopy.New(a1).To(b) // b={Int:100, String:"Keep"} // Int被修改, String保留
 	stcopy.New(b).From(a2) // b={Int:100, String:"Keep"}
 	// 结构拷贝至map, 保存结构信息, 当存在interface{}字段时, 可完整还原成结构
@@ -89,14 +88,23 @@ func main(){
     stcopy.New(m2).From(m1) // m2={Int:100, "_ptr":true, "_type":"A"}
 }
 ```
-
 * 如果map中存在_type字段, 需要通过WithTypeMap()方法, 增加该结构的反射信息, 才能正确转换成对应的结构
     * 如果没有, 则拷贝一份map
 * 可通过配置中的FieldTag参数, 修改字段的名字
-```
+```go
+package main
+import "github.com/zhongguo168a/stcopy"
+
+type A struct{
+    Id string `bson:"_id"`
+}
+
+func main(){
+	a := &A{Id:"testId"}
     m := map[string]interface{}{}
-	stcopy.New(&A{Id:"testId"}).WithFieldTag("bson").To(&map[string]interface{}) 
+	stcopy.New(a).WithFieldTag("bson").To(&m) 
 	// m={"_id":"testId"}
+}
 ```
 * 对于类型不一致的情况
     * 可以在ValueA增加To(ctx)和From(ctx)方法实现转换
