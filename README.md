@@ -116,6 +116,7 @@ func main(){
 * 提供了Valid()方法, 深度优先, 遍历所有属性的Valid()方法(如果存在)
 * 执行To/From方法时, 深度优先, 遍历所有属性的OnCopyed()方法(如果存在) 
 ```go
+// ignore标签与深度优先的例子
 package main
 import (
 	"github.com/zhongguo168a/stcopy"
