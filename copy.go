@@ -4,8 +4,10 @@ import (
 	"code.zhongguo168a.top/zg168a/gocodes/utils/stringutil"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 func isHard(k reflect.Kind) bool {
@@ -93,7 +95,7 @@ func (ctx *Context) From(val interface{}) (err error) {
 	}
 	ctx.convertType = getTargetMode(ctx.valueB.Indirect(), ctx.valueA.Indirect())
 
-	_, err = ctx.copy(ctx.valueB.Indirect(), ctx.valueA.Indirect(), ctx.provideTyp.Elem(), false, 0)
+	_, err = ctx.copy(ctx.valueB, ctx.valueA, ctx.provideTyp, false, 0)
 	if err != nil {
 		return
 	}
@@ -111,17 +113,17 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	srcref := source.Upper()
 	tarref := target.Upper()
 	//
-	//prefix := strings.Repeat("----", depth)
-	//fmt.Println(prefix+"> copy:", "provide typ=", provideTyp, "kind=", provideTyp.Kind())
-	//fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref)
-	//fmt.Println(prefix+"copy: tartyp=", target.GetTypeString(), "tar=", tarref, "nil=", ",  canset=", tarref.CanSet(), func() (x string) {
-	//	if isHard(tarref.Kind()) && tarref.IsNil() {
-	//		x = "isnil=true"
-	//	} else {
-	//		x = "isnil=false"
-	//	}
-	//	return
-	//}())
+	prefix := strings.Repeat("----", depth)
+	fmt.Println(prefix+"> copy:", "provide typ=", provideTyp, "kind=", provideTyp.Kind())
+	fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref)
+	fmt.Println(prefix+"copy: tartyp=", target.GetTypeString(), "tar=", tarref, "nil=", ",  canset=", tarref.CanSet(), func() (x string) {
+		if isHard(tarref.Kind()) && tarref.IsNil() {
+			x = "isnil=true"
+		} else {
+			x = "isnil=false"
+		}
+		return
+	}())
 
 	// 源是否空
 	if srcref.IsValid() == false {
@@ -701,25 +703,22 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 					err = errors.New("convert fail")
 					return
 				}
-				//switch srcref.Type().Kind() {
-				//case reflect.Interface:
-				//	x = srcref.Elem().Convert(provideTyp)
-				//default:
-				//	// 不做处理
-				//	//x = srcref.Convert(provideTyp)
-				//}
 			} else {
 				x = srcref
 			}
+
 			return
 		}())
-
+		if ctx.convertType == AnyToJsonMap {
+			tarref = convert2MapValue(tarref)
+		}
 	}
-
+	// 执行初始化函数
+	err = TypeUtiler.Call(tarref, "OnCopyed", ctx)
+	if err != nil {
+		return
+	}
 	result = Value(tarref)
-	if ctx.convertType == AnyToJsonMap {
-		result = result.convertToMapValue()
-	}
 
 	//fmt.Println("resut >", result.Upper())
 	return

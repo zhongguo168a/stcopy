@@ -72,6 +72,34 @@ go get github.com/zhongguo168a/stcopy
     * 遇到转换成目标类型, 返回错误
 * 如果字段中存在不需要/无法拷贝的类型(例如time.Time), 可以通过设置BaseTypes, 像int类型一样, 直接赋值过去 
 * 提供了valid()方法, 深度优先, 递归遍历所有字段的valid()方法(如果存在)
+* 可使用tag: stcopy:"ignore", 忽略该字段的拷贝
+* 深度遍历过程中, 如果字段实现了OnCopyed函数, 执行该函数 
+```
+
+type A struct {
+	Int int // 初始值 = 10
+}
+func (a *A) OnCopyed() { // 首先进入
+	a.Int = a.Int * 2 // 10 * 2 = 20
+}
+
+type B struct {
+	Struct *A
+}
+func (b *B) OnCopyed() { // 最后进入
+	b.Struct.Int = b.Struct.Int * 2 // 20 * 2 = 40
+}
+
+func main() {
+	b := &B{}
+	_ = stcopy.New(b).From(map[string]interface{}{
+		"_ptr": true, "_type": "B",
+		"Struct": map[string]interface{}{"_ptr": true, "_type": "A",
+			"Int": 10}})
+	println(b.Struct.Int) // echo 40
+}
+
+```
 
 
 #### 例子

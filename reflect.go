@@ -4,6 +4,7 @@ import (
 	"errors"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -173,28 +174,6 @@ func (val Value) IsNil() bool {
 	return false
 }
 
-// 转化成map类型的值
-func (val Value) convertToMapValue() (r Value) {
-	valref := val.Upper()
-	var a reflect.Value
-	switch valref.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		a = reflect.ValueOf(float64(valref.Int()))
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		a = reflect.ValueOf(float64(valref.Uint()))
-	case reflect.Float32, reflect.Float64:
-		a = reflect.ValueOf(valref.Float())
-	case reflect.Bool:
-		a = reflect.ValueOf(valref.Bool())
-	case reflect.String:
-		a = reflect.ValueOf(valref.String())
-	default:
-		a = valref
-	}
-	r = Value(a)
-	return
-}
-
 var (
 	TypeUtiler = typeUtil(0)
 )
@@ -239,6 +218,41 @@ func (sv *typeUtil) GetFieldRecursion(typ reflect.Type) (r []*reflect.StructFiel
 
 		default:
 			r = append(r, &field)
+		}
+	}
+	return
+}
+
+func (*typeUtil) Call(target reflect.Value, mname string, ctx *Context, args ...reflect.Value) (err error) {
+	mtype, ok := target.Type().MethodByName(mname)
+	if ok == true {
+		methodVal := target.MethodByName(mname)
+		argslen := 2 + len(args)
+		if mtype.Type.NumIn() > argslen {
+			err = errors.New("func " + mname + ": number of argument is not " + strconv.Itoa(mtype.Type.NumIn()))
+			return
+		}
+		results := func() (x []reflect.Value) {
+			if mtype.Type.NumIn() == 1 {
+				x = methodVal.Call([]reflect.Value{})
+			} else {
+				a := append([]reflect.Value{reflect.ValueOf(ctx)}, args...)
+				x = methodVal.Call(a)
+			}
+			return
+		}()
+		// 包含error
+		if mtype.Type.NumOut() > 0 {
+			if results[0].Type().Kind() == reflect.Bool {
+				if results[0].Bool() == false {
+					err = errors.New("failed")
+				}
+			} else { // error
+				if results[0].IsNil() == false {
+					err = results[0].Interface().(error)
+				}
+			}
+			return
 		}
 	}
 	return

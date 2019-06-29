@@ -5,6 +5,25 @@ import (
 	"strconv"
 )
 
+// 转化成map类型的值
+func convert2MapValue(val reflect.Value) (r reflect.Value) {
+	switch val.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		r = reflect.ValueOf(float64(val.Int()))
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		r = reflect.ValueOf(float64(val.Uint()))
+	case reflect.Float32, reflect.Float64:
+		r = reflect.ValueOf(val.Float())
+	case reflect.Bool:
+		r = reflect.ValueOf(val.Bool())
+	case reflect.String:
+		r = reflect.ValueOf(val.String())
+	default:
+		r = val
+	}
+	return
+}
+
 func convert2String(val reflect.Value, typ reflect.Type) (r reflect.Value) {
 
 	switch val.Kind() {
