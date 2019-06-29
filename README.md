@@ -113,6 +113,8 @@ func main(){
     * 遇到转换成目标类型, 返回错误
 * 如果属性中存在不需要/无法拷贝的类型(例如time.Time), 可以通过设置BaseTypes, 像int类型一样, 直接赋值过去 
 * 可使用tag: stcopy:"ignore", 忽略该属性的拷贝
+* 提供了Valid()方法, 深度优先, 遍历所有属性的Valid()方法(如果存在)
+* 执行To/From方法时, 深度优先, 遍历所有属性的OnCopyed()方法(如果存在) 
 ```go
 package main
 import (
@@ -122,54 +124,35 @@ import (
 
 type Config struct {
     Cache `stcopy:"ignore"` // 解析时Cache里面的属性会被忽略, 然后通过OnCopyed()方法对属性State进行处理
+    //
+    IgnoreField interface{}`stcopy:"ignore"` // 被忽略的属性
     // 配置属性
     State string // 初始值="A|B|C"
+    //
+    St *Struct // 没有忽略
 }
-func (c *Config) OnCopyed() { // 首先进入
+func (c *Config) OnCopyed() {// 深度优先, 最后执行, Valid()方法同理
 	c.States = strings.Split(c.State, "|")
+	c.St.Int = c.St.Int * 2 // 20 * 2 = 40
 }
 
 type Cache struct {
-	//
-	States []string
-}
-```
-
-* 提供了Valid()方法, 深度优先, 遍历所有属性的Valid()方法(如果存在)
-* 执行To/From方法时, 深度优先, 遍历所有属性的OnCopyed()方法(如果存在) 
-```go
-package main
-import (
-	"github.com/zhongguo168a/stcopy"
-)
-
-type A struct {
-	Int int // 初始值 = 10
-}
-func (a *A) OnCopyed() { // 首先进入
-	a.Int = a.Int * 2 // 10 * 2 = 20
+	// 缓存的属性
+	States []string // 结果=[]string{"A", "B", "C"}
 }
 
-type B struct {
-	Struct *A
-}
-func (b *B) OnCopyed() { // 最后进入  
-	b.Struct.Int = b.Struct.Int * 2 // 20 * 2 = 40
+type Struct struct{
+    Int int // 初始值 = 10
+	// 
+	IgnoreField interface{} `stcopy:"ignore"` // 结构内部也可以使用
 }
 
-func main() {
-	b := &B{}
-	_ = stcopy.New(b).From(map[string]interface{}{
-		"_ptr": true, "_type": "B",
-		"Struct": map[string]interface{}{"_ptr": true, "_type": "A",
-			"Int": 10}})
-	println(b.Struct.Int) // echo 40
+func (s *Struct) OnCopyed() {// 深度优先, 首先执行, Valid()方法同理
+    s.Int = s.Int * 2 // 10 * 2 = 20
 }
-// Valid()方法同理
 
 ```
 
-
-#### 例子
+#### 更多的例子
 
 可参考单元测试, 单元测试集合了所有功能的示例
