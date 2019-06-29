@@ -9,7 +9,7 @@
     * 深度拷贝/覆盖一个map/struct到另一个map/struct, 由于stcopy提供了预转换的方法, 可减少使用时, 每次都转换的麻烦
     * 通过map修改struct: 设置了键值, 会修改对应键值的struct
     * 验证结构字段是否合法
-    * 不包含fmt和json, 可用于转换成js的场景
+    * 不包含fmt和json包, 可用于转换成js的场景
     
 * 实用场景
     * 通讯协议的转换和验证
@@ -61,8 +61,10 @@ go get github.com/zhongguo168a/stcopy
 * 可通过配置中的FieldTag参数, 修改字段的名字
 
 ```
-  	// 例如在结构的Id字段 定义了bson:"_id", 转换后的struct.Id 变成 map["_id"]
-    
+// 结构如下, 转换后的A.Id 变成 map["_id": "string value"]
+type A struct{
+    Id string bson:"_id"
+}  
 ```
 
 * 对于类型不一致的情况
@@ -71,11 +73,10 @@ go get github.com/zhongguo168a/stcopy
     * 如果没有设置To/From, 默认使用reflect.Convert方法来转化
     * 遇到转换成目标类型, 返回错误
 * 如果字段中存在不需要/无法拷贝的类型(例如time.Time), 可以通过设置BaseTypes, 像int类型一样, 直接赋值过去 
-* 提供了valid()方法, 深度优先, 递归遍历所有字段的valid()方法(如果存在)
 * 可使用tag: stcopy:"ignore", 忽略该字段的拷贝
-* 深度遍历过程中, 如果字段实现了OnCopyed函数, 执行该函数 
-```
-
+* 提供了Valid()方法, 深度优先, 遍历所有字段的Valid()方法(如果存在)
+* 执行To/Frome方法时, 深度优先, 遍历所有字段的OnCreated()方法(如果存在) 
+```go
 type A struct {
 	Int int // 初始值 = 10
 }
@@ -86,7 +87,7 @@ func (a *A) OnCopyed() { // 首先进入
 type B struct {
 	Struct *A
 }
-func (b *B) OnCopyed() { // 最后进入
+func (b *B) OnCopyed() { // 最后进入  
 	b.Struct.Int = b.Struct.Int * 2 // 20 * 2 = 40
 }
 
@@ -98,6 +99,7 @@ func main() {
 			"Int": 10}})
 	println(b.Struct.Int) // echo 40
 }
+// Valid()方法同理
 
 ```
 
