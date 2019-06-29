@@ -77,6 +77,11 @@ type A struct{
 * 提供了Valid()方法, 深度优先, 遍历所有字段的Valid()方法(如果存在)
 * 执行To/Frome方法时, 深度优先, 遍历所有字段的OnCreated()方法(如果存在) 
 ```go
+package main
+import (
+	"github.com/zhongguo168a/stcopy"
+)
+
 type A struct {
 	Int int // 初始值 = 10
 }
