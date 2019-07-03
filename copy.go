@@ -130,6 +130,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	if isHard(srcref.Kind()) && srcref.IsNil() {
 		return
 	}
+
 	// 处理base map
 	_, ok := ctx.baseMap[provideTyp.Name()]
 	if ok == true {
@@ -594,6 +595,13 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 				}
 			}
 
+			if ctx.Config.IgnoreDefault {
+				if TypeUtiler.CompareEqualDefault(srcfield, field) {
+					continue
+				}
+
+			}
+
 			//fmt.Println(prefix+"struct: field=", field.Name, ", fieldtyp=", field.Type)
 			// 获取目标值
 			tarfield := getFieldVal(tarref, field)
@@ -688,7 +696,15 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 			if srcref.Type() != provideTyp {
 				switch provideTyp.Kind() {
 				case reflect.String:
-					x = convert2String(srcref, provideTyp)
+					x, err = convert2String(srcref)
+					if err != nil {
+						if srcref.Type().ConvertibleTo(provideTyp) {
+							x = srcref.Convert(provideTyp)
+						} else {
+							x = reflect.ValueOf("")
+						}
+					}
+
 				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 					fallthrough
 				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:

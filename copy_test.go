@@ -107,9 +107,11 @@ type ClassEnum struct {
 }
 
 type Struct struct {
-	String string
-	Int    int
+	String string `value:"default"`
+	Int    int    `value:"1"`
 	Bool   bool
+	Float  float64
+	Uint   uint
 }
 
 type StructOnCopyed struct {
@@ -467,13 +469,17 @@ func TestCopyStructToMapBase(t *testing.T) {
 func TestCopyStructToMapIgnore(t *testing.T) {
 
 	sources := []interface{}{
-		&ClassIgnore{ClassBase: ClassBase{Bytes: []byte("test"), Int: 1, ConvertString: ConvertString("convert string")}, String: "test ignore"}, // source
-		&map[string]interface{}{},                        // target
-		&map[string]interface{}{"String": "test ignore"}, // result
+		//&ClassIgnore{ClassBase: ClassBase{Bytes: []byte("test"), Int: 1, ConvertString: ConvertString("convert string")}, String: "test ignore"}, // source
+		//&map[string]interface{}{},                        // target
+		//&map[string]interface{}{"String": "test ignore"}, // result
+		//
+		&Struct{Uint: 1, Float: 0.0, String: "default", Int: 1, Bool: true},
+		&map[string]interface{}{},                          // target
+		&map[string]interface{}{"Bool": true, "Uint": 1.0}, // result
 	}
 
 	for i := 0; i < len(sources); i += 3 {
-		err := New(sources[i]).WithBaseTypes(baseTypes).To(sources[i+1])
+		err := New(sources[i]).WithBaseTypes(baseTypes).WithIgnoreDefault(true).To(sources[i+1])
 		if err != nil {
 			t.Error("stcopy: " + err.Error())
 			return
@@ -752,94 +758,94 @@ func TestCopyAnyToJsonMap(t *testing.T) {
 
 func TestCopyJsonMapToStruct(t *testing.T) {
 	sources := []interface{}{
-		//"test string type",
-		//"test string type",
-		//true,
-		//true,
-		//map[string]interface{}{
-		//	"String": "test struct",
-		//},
-		//map[string]interface{}{
-		//	"String": "test struct",
-		//},
-		//map[string]interface{}{
-		//	"a": "test a",
-		//	"b": "test b",
-		//},
-		//map[string]interface{}{
-		//	"a": "test a",
-		//	"b": "test b",
-		//},
-		//map[string]interface{}{
-		//	"a": &map[string]interface{}{"String": "test map struct a"},
-		//	"b": &map[string]interface{}{"String": "test map struct b"},
-		//},
-		//map[string]interface{}{
-		//	"a": map[string]interface{}{"String": "test map struct a"},
-		//	"b": map[string]interface{}{"String": "test map struct b"},
-		//},
-		//map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct"},
-		//Struct{String: "test struct", Int: 100, Bool: true},
-		//map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct", "_ptr": true},
-		//&Struct{String: "test struct", Int: 100, Bool: true},
-		//// next
-		//map[string]interface{}{"Any": map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct", "_ptr": true}, "_type": "StructAny", "_ptr": true},
-		//&StructAny{Any: &Struct{String: "test struct", Int: 100, Bool: true}},
-		//// next
-		//map[string]interface{}{"Any": []interface{}{
-		//	map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct", "_ptr": true},
-		//}, "_type": "StructAny", "_ptr": true},
-		//&StructAny{Any: []interface{}{
-		//	&Struct{String: "test struct", Int: 100, Bool: true},
-		//}},
-		//// next
-		//map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "NoStruct", "_ptr": true},
-		//map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "NoStruct", "_ptr": true},
-		//[]interface{}{"1", "2"},
-		//[]interface{}{"1", "2"},
-		//[]interface{}{
-		//	map[string]interface{}{"String": "test struct"},
-		//	map[string]interface{}{"String": "test struct"},
-		//},
-		//[]interface{}{
-		//	map[string]interface{}{"String": "test struct"},
-		//	map[string]interface{}{"String": "test struct"},
-		//},
-		//[]interface{}{
-		//	&map[string]interface{}{"String": "test struct"},
-		//	&map[string]interface{}{"String": "test struct"},
-		//},
-		//[]interface{}{
-		//	map[string]interface{}{"String": "test struct"},
-		//	map[string]interface{}{"String": "test struct"},
-		//},
-		//[]interface{}{
-		//	map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "Struct"},
-		//	map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "Struct"},
-		//},
-		//[]interface{}{
-		//	Struct{String: "test struct", Int: 100, Bool: true},
-		//	Struct{String: "test struct 2", Int: 200, Bool: true},
-		//},
-		//[]interface{}{
-		//	map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "Struct", "_ptr": true},
-		//	map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "Struct", "_ptr": true},
-		//},
-		//[]interface{}{
-		//	&Struct{String: "test struct", Int: 100, Bool: true},
-		//	&Struct{String: "test struct 2", Int: 200, Bool: true},
-		//},
-		//[]interface{}{
-		//	map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "NoStruct", "_ptr": true},
-		//	map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "NoStruct", "_ptr": true},
-		//},
-		//[]interface{}{
-		//	map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "NoStruct", "_ptr": true},
-		//	map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "NoStruct", "_ptr": true},
-		//},
-		// 测试OnCopyed
-		//map[string]interface{}{"_ptr":true, "_type": "StructOnCopyed", "Int": 10},
-		//&StructOnCopyed{Int: 20},
+		"test string type",
+		"test string type",
+		true,
+		true,
+		map[string]interface{}{
+			"String": "test struct",
+		},
+		map[string]interface{}{
+			"String": "test struct",
+		},
+		map[string]interface{}{
+			"a": "test a",
+			"b": "test b",
+		},
+		map[string]interface{}{
+			"a": "test a",
+			"b": "test b",
+		},
+		map[string]interface{}{
+			"a": &map[string]interface{}{"String": "test map struct a"},
+			"b": &map[string]interface{}{"String": "test map struct b"},
+		},
+		map[string]interface{}{
+			"a": map[string]interface{}{"String": "test map struct a"},
+			"b": map[string]interface{}{"String": "test map struct b"},
+		},
+		map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct"},
+		Struct{String: "test struct", Int: 100, Bool: true},
+		map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct", "_ptr": true},
+		&Struct{String: "test struct", Int: 100, Bool: true},
+		// next
+		map[string]interface{}{"Any": map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct", "_ptr": true}, "_type": "StructAny", "_ptr": true},
+		&StructAny{Any: &Struct{String: "test struct", Int: 100, Bool: true}},
+		// next
+		map[string]interface{}{"Any": []interface{}{
+			map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct", "_ptr": true},
+		}, "_type": "StructAny", "_ptr": true},
+		&StructAny{Any: []interface{}{
+			&Struct{String: "test struct", Int: 100, Bool: true},
+		}},
+		// next
+		map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "NoStruct", "_ptr": true},
+		map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "NoStruct", "_ptr": true},
+		[]interface{}{"1", "2"},
+		[]interface{}{"1", "2"},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct"},
+			map[string]interface{}{"String": "test struct"},
+		},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct"},
+			map[string]interface{}{"String": "test struct"},
+		},
+		[]interface{}{
+			&map[string]interface{}{"String": "test struct"},
+			&map[string]interface{}{"String": "test struct"},
+		},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct"},
+			map[string]interface{}{"String": "test struct"},
+		},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "Struct"},
+			map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "Struct"},
+		},
+		[]interface{}{
+			Struct{String: "test struct", Int: 100, Bool: true},
+			Struct{String: "test struct 2", Int: 200, Bool: true},
+		},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "Struct", "_ptr": true},
+			map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "Struct", "_ptr": true},
+		},
+		[]interface{}{
+			&Struct{String: "test struct", Int: 100, Bool: true},
+			&Struct{String: "test struct 2", Int: 200, Bool: true},
+		},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "NoStruct", "_ptr": true},
+			map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "NoStruct", "_ptr": true},
+		},
+		[]interface{}{
+			map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "NoStruct", "_ptr": true},
+			map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "NoStruct", "_ptr": true},
+		},
+		//测试OnCopyed
+		map[string]interface{}{"_ptr": true, "_type": "StructOnCopyed", "Int": 10},
+		&StructOnCopyed{Int: 20},
 		// 测试OnCopyed 多层
 		map[string]interface{}{"_ptr": true, "_type": "StructOnCopyed2", "Struct": map[string]interface{}{"Int": 10}},
 		&StructOnCopyed2{Struct: &StructOnCopyed{Int: 40}},

@@ -192,6 +192,20 @@ func (*typeUtil) UnfoldType(typ reflect.Type) reflect.Type {
 	return typ
 }
 
+func (*typeUtil) CompareEqualDefault(value reflect.Value, field *reflect.StructField) bool {
+	x, err := convert2String(value)
+	if err != nil {
+		return false
+	}
+	tag, tagok := field.Tag.Lookup("value")
+	if tagok {
+		return x.String() == tag
+	}
+
+	zero := reflect.Zero(field.Type)
+	return value.Interface() == zero.Interface()
+}
+
 func (*typeUtil) HasTagIgnore(field reflect.StructField) bool {
 	flags, has := field.Tag.Lookup("stcopy")
 	if has == false {

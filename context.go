@@ -101,6 +101,9 @@ type Config struct {
 	FieldTag string
 	// 当转化成map时, 是否总是携带结构信息, 包括_type和_ptr
 	AlwaysStructInfo bool
+	// 拷贝时, 如果来源的值等于默认值, 将被忽略
+	// 可通过设置属性的tag: value:"" , 设置默认值. 如果没有设置, 根据属性类型的默认值
+	IgnoreDefault bool
 }
 
 func (ctx *Context) getProvideTyp(src, tar Value) (typ reflect.Type, err error) {
@@ -152,5 +155,10 @@ func (ctx *Context) WithConfig(val *Config) *Context {
 
 func (ctx *Context) WithFieldTag(tag string) *Context {
 	ctx.Config.FieldTag = tag
+	return ctx
+}
+
+func (ctx *Context) WithIgnoreDefault(b bool) *Context {
+	ctx.Config.IgnoreDefault = b
 	return ctx
 }

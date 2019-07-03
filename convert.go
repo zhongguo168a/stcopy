@@ -1,6 +1,7 @@
 package stcopy
 
 import (
+	"errors"
 	"reflect"
 	"strconv"
 )
@@ -24,8 +25,7 @@ func convert2MapValue(val reflect.Value) (r reflect.Value) {
 	return
 }
 
-func convert2String(val reflect.Value, typ reflect.Type) (r reflect.Value) {
-
+func convert2String(val reflect.Value) (r reflect.Value, err error) {
 	switch val.Kind() {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		r = reflect.ValueOf(strconv.Itoa(int(val.Uint())))
@@ -33,13 +33,10 @@ func convert2String(val reflect.Value, typ reflect.Type) (r reflect.Value) {
 		r = reflect.ValueOf(strconv.Itoa(int(val.Int())))
 	case reflect.Float32, reflect.Float64:
 		r = reflect.ValueOf(strconv.FormatFloat(val.Float(), 'f', -1, 64))
+	case reflect.String:
+		r = val
 	default:
-		if val.Type().ConvertibleTo(typ) {
-			r = val.Convert(typ)
-		} else {
-			r = reflect.ValueOf("")
-		}
-
+		err = errors.New("not support")
 	}
 	return
 }
