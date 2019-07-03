@@ -479,7 +479,7 @@ func TestCopyStructToMapIgnore(t *testing.T) {
 	}
 
 	for i := 0; i < len(sources); i += 3 {
-		err := New(sources[i]).WithBaseTypes(baseTypes).WithIgnoreDefault(true).To(sources[i+1])
+		err := New(sources[i]).WithBaseTypes(baseTypes).WithIgnoreDefault().To(sources[i+1])
 		if err != nil {
 			t.Error("stcopy: " + err.Error())
 			return

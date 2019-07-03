@@ -158,7 +158,7 @@ func (ctx *Context) WithFieldTag(tag string) *Context {
 	return ctx
 }
 
-func (ctx *Context) WithIgnoreDefault(b bool) *Context {
-	ctx.Config.IgnoreDefault = b
+func (ctx *Context) WithIgnoreDefault() *Context {
+	ctx.Config.IgnoreDefault = true
 	return ctx
 }
