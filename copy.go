@@ -1,9 +1,9 @@
 package stcopy
 
 import (
-	"code.zhongguo168a.top/zg168a/gocodes/utils/stringutil"
 	"encoding/base64"
 	"errors"
+	"github.com/zhongguo168a/gocodes/utils/stringutil"
 	"reflect"
 	"strconv"
 )
