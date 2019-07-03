@@ -1,9 +1,9 @@
 package stcopy
 
 import (
-	"code.zhongguo168a.top/zg168a/gocodes/utils/binaryutil"
 	"encoding/binary"
 	"errors"
+	"github.com/zhongguo168a/gocodes/utils/binaryutil"
 	"io"
 	"reflect"
 	"strconv"
