@@ -193,10 +193,7 @@ func (*typeUtil) UnfoldType(typ reflect.Type) reflect.Type {
 }
 
 func (*typeUtil) CompareEqualDefault(value reflect.Value, field *reflect.StructField) bool {
-	x, err := convert2String(value)
-	if err != nil {
-		return false
-	}
+	x := convert2String(value)
 	tag, tagok := field.Tag.Lookup("value")
 	if tagok {
 		return x.String() == tag

@@ -1,7 +1,6 @@
 package stcopy
 
 import (
-	"errors"
 	"reflect"
 	"strconv"
 )
@@ -25,7 +24,7 @@ func convert2MapValue(val reflect.Value) (r reflect.Value) {
 	return
 }
 
-func convert2String(val reflect.Value) (r reflect.Value, err error) {
+func convert2String(val reflect.Value) (r reflect.Value) {
 	switch val.Kind() {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		r = reflect.ValueOf(strconv.Itoa(int(val.Uint())))
@@ -36,13 +35,13 @@ func convert2String(val reflect.Value) (r reflect.Value, err error) {
 	case reflect.String:
 		r = val
 	default:
-		err = errors.New("not support")
+		r = reflect.ValueOf("")
 	}
 	return
 }
 
 // 转换成Int型
-func convert2Int(val reflect.Value, typ reflect.Type) (r reflect.Value) {
+func convert2Int(val reflect.Value) (r reflect.Value) {
 	switch val.Kind() {
 	case reflect.String:
 		i, err := strconv.Atoi(val.Interface().(string))
@@ -52,18 +51,13 @@ func convert2Int(val reflect.Value, typ reflect.Type) (r reflect.Value) {
 			r = reflect.ValueOf(i)
 		}
 	default:
-		if val.Type().ConvertibleTo(typ) {
-			r = val
-		} else {
-			r = reflect.ValueOf(0)
-		}
+		r = reflect.ValueOf(0)
 	}
 
-	r = r.Convert(typ)
 	return
 }
 
-func convert2Float(val reflect.Value, typ reflect.Type) (r reflect.Value) {
+func convert2Float(val reflect.Value) (r reflect.Value) {
 	switch val.Kind() {
 	case reflect.String:
 		i, err := strconv.ParseFloat(val.Interface().(string), 64)
@@ -73,18 +67,13 @@ func convert2Float(val reflect.Value, typ reflect.Type) (r reflect.Value) {
 			r = reflect.ValueOf(i)
 		}
 	default:
-		if val.Type().ConvertibleTo(typ) {
-			r = val
-		} else {
-			r = reflect.ValueOf(0.0)
-		}
+		r = reflect.ValueOf(0.0)
 	}
 
-	r = r.Convert(typ)
 	return
 }
 
-func convert2Bool(val reflect.Value, typ reflect.Type) (r reflect.Value) {
+func convert2Bool(val reflect.Value) (r reflect.Value) {
 	switch val.Kind() {
 	case reflect.String:
 		data := val.Interface().(string)
@@ -94,13 +83,7 @@ func convert2Bool(val reflect.Value, typ reflect.Type) (r reflect.Value) {
 			r = reflect.ValueOf(false)
 		}
 	default:
-		if val.Type().ConvertibleTo(typ) {
-			r = val
-		} else {
-			r = reflect.ValueOf(false)
-		}
+		r = reflect.ValueOf(false)
 	}
-
-	r = r.Convert(typ)
 	return
 }

@@ -355,7 +355,7 @@ func TestCopyMapToStructBase(t *testing.T) {
 		&map[string]interface{}{"Bytes": "dGVzdA=="}, // source
 		&ClassBase{},                      // target
 		&ClassBase{Bytes: []byte("test")}, // result
-		//
+
 		&map[string]interface{}{"Bytes": []byte("test")}, // source
 		&ClassBase{},                      // target
 		&ClassBase{Bytes: []byte("test")}, // result
@@ -414,9 +414,9 @@ func TestCopyStructToMapConvert(t *testing.T) {
 
 	sources := []interface{}{
 		//
-		//&ClassConvert{Convert: &Convert{Int: 100}, ConvertDefine: ConvertDefine(200), Enum: TestEnum_A1}, // source
-		//&map[string]interface{}{}, // target
-		//&map[string]interface{}{"Convert": "{\"Int\":100}", "Enum": "A1", "ConvertDefine": "200"}, // result
+		&ClassConvert{Convert: &Convert{Int: 100}, ConvertDefine: ConvertDefine(200), Enum: TestEnum_A1}, // source
+		&map[string]interface{}{}, // target
+		&map[string]interface{}{"Convert": "{\"Int\":100}", "Enum": "A1", "ConvertDefine": "200"}, // result
 		//
 		&ClassBase{Bytes: []byte("test")},           // source
 		&map[string]interface{}{"String": "test 1"}, // target
@@ -442,7 +442,7 @@ func TestCopyStructToMapBase(t *testing.T) {
 	sources := []interface{}{
 		&ClassStruct{&Struct{String: "test struct", Int: 100}}, // source
 		&map[string]interface{}{},                              // target
-		&map[string]interface{}{"Struct": map[string]interface{}{"String": "test struct", "Bool": false, "Int": 100.0, "_ptr": true}}, // result
+		&map[string]interface{}{"Struct": map[string]interface{}{"String": "test struct", "Bool": false, "Float": 0.0, "Uint": 0.0, "Int": 100.0, "_ptr": true}}, // result
 		// next 结构没有赋值的字段, 也会覆盖掉目标字段
 		&ClassBase{Bytes: []byte("test"), Int: 1, ConvertString: ConvertString("convert string")},                                                           // source
 		&map[string]interface{}{"String": "test 2", "Int": 2.0, "Bool": true},                                                                               // target
@@ -469,9 +469,9 @@ func TestCopyStructToMapBase(t *testing.T) {
 func TestCopyStructToMapIgnore(t *testing.T) {
 
 	sources := []interface{}{
-		//&ClassIgnore{ClassBase: ClassBase{Bytes: []byte("test"), Int: 1, ConvertString: ConvertString("convert string")}, String: "test ignore"}, // source
-		//&map[string]interface{}{},                        // target
-		//&map[string]interface{}{"String": "test ignore"}, // result
+		&ClassIgnore{ClassBase: ClassBase{Bytes: []byte("test"), Int: 1, ConvertString: ConvertString("convert string")}, String: "test ignore"}, // source
+		&map[string]interface{}{},                        // target
+		&map[string]interface{}{"String": "test ignore"}, // result
 		//
 		&Struct{Uint: 1, Float: 0.0, String: "default", Int: 1, Bool: true},
 		&map[string]interface{}{},                          // target
@@ -500,7 +500,7 @@ func TestCopyStructToMapAlwaysStructInfo(t *testing.T) {
 	sources := []interface{}{
 		&ClassStruct{&Struct{String: "test struct", Int: 100}}, // source
 		&map[string]interface{}{},                              // target
-		&map[string]interface{}{"_type": "ClassStruct", "Struct": map[string]interface{}{"String": "test struct", "Bool": false, "Int": 100.0, "_ptr": true, "_type": "Struct"}}, // result
+		&map[string]interface{}{"_type": "ClassStruct", "Struct": map[string]interface{}{"String": "test struct", "Bool": false, "Float": 0.0, "Uint": 0.0, "Int": 100.0, "_ptr": true, "_type": "Struct"}}, // result
 		// next 结构没有赋值的字段, 也会覆盖掉目标字段
 		&ClassBase{Bytes: []byte("test"), Int: 1, ConvertString: ConvertString("convert string")},                                                                                 // source
 		&map[string]interface{}{"String": "test 2", "Int": 2.0, "Bool": true},                                                                                                     // target
@@ -634,44 +634,44 @@ func TestCopyStructToMapAlwaysStructInfo(t *testing.T) {
 
 func TestCopyAnyToJsonMap(t *testing.T) {
 	sources := []interface{}{
-		"test string type",
-		"test string type",
-		int(10),
-		float64(10),
-		int32(10),
-		float64(10),
-		uint(10),
-		float64(10),
-		// 5
-		uint32(10),
-		float64(10),
-		true,
-		true,
-		map[string]interface{}{"String": "test struct"},
-		map[string]interface{}{"String": "test struct"},
-		&map[string]interface{}{"String": "test struct"},
-		map[string]interface{}{"String": "test struct", "_ptr": true},
-		map[string]interface{}{
-			"a": "test a",
-			"b": "test b",
-		},
-		map[string]interface{}{
-			"a": "test a",
-			"b": "test b",
-		},
+		//"test string type",
+		//"test string type",
+		//int(10),
+		//float64(10),
+		//int32(10),
+		//float64(10),
+		//uint(10),
+		//float64(10),
+		//// 5
+		//uint32(10),
+		//float64(10),
+		//true,
+		//true,
+		//map[string]interface{}{"String": "test struct"},
+		//map[string]interface{}{"String": "test struct"},
+		//&map[string]interface{}{"String": "test struct"},
+		//map[string]interface{}{"String": "test struct", "_ptr": true},
+		//map[string]interface{}{
+		//	"a": "test a",
+		//	"b": "test b",
+		//},
+		//map[string]interface{}{
+		//	"a": "test a",
+		//	"b": "test b",
+		//},
 		// 10
-		map[string]interface{}{
-			"a": &map[string]interface{}{"String": "test map struct a"},
-			"b": &map[string]interface{}{"String": "test map struct b"},
-		},
-		map[string]interface{}{
-			"a": map[string]interface{}{"String": "test map struct a", "_ptr": true},
-			"b": map[string]interface{}{"String": "test map struct b", "_ptr": true},
-		},
+		//map[string]interface{}{
+		//	"a": &map[string]interface{}{"String": "test map struct a"},
+		//	"b": &map[string]interface{}{"String": "test map struct b"},
+		//},
+		//map[string]interface{}{
+		//	"a": map[string]interface{}{"String": "test map struct a", "_ptr": true},
+		//	"b": map[string]interface{}{"String": "test map struct b", "_ptr": true},
+		//},
 		Struct{String: "test struct", Int: 100, Bool: true},
-		map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct"},
+		map[string]interface{}{"String": "test struct", "Float": 0.0, "Uint": 0.0, "Int": 100.0, "Bool": true, "_type": "Struct"},
 		&Struct{String: "test struct", Int: 100, Bool: true},
-		map[string]interface{}{"String": "test struct", "Int": float64(100), "Bool": true, "_type": "Struct", "_ptr": true},
+		map[string]interface{}{"String": "test struct", "Float": 0.0, "Uint": 0.0, "Int": 100.0, "Bool": true, "_type": "Struct", "_ptr": true},
 		[]string{"1", "2"},
 		[]interface{}{"1", "2"},
 		[]byte{0, 1, 2},
@@ -699,16 +699,16 @@ func TestCopyAnyToJsonMap(t *testing.T) {
 			{String: "test struct 2", Int: 200, Bool: true},
 		},
 		[]interface{}{
-			map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "Struct"},
-			map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "Struct"},
+			map[string]interface{}{"String": "test struct", "Float": 0.0, "Uint": 0.0, "Int": 100.0, "Bool": true, "_type": "Struct"},
+			map[string]interface{}{"String": "test struct 2", "Float": 0.0, "Uint": 0.0, "Int": 200.0, "Bool": true, "_type": "Struct"},
 		},
 		[]*Struct{
 			{String: "test struct", Int: 100, Bool: true},
 			{String: "test struct 2", Int: 200, Bool: true},
 		},
 		[]interface{}{
-			map[string]interface{}{"String": "test struct", "Int": 100.0, "Bool": true, "_type": "Struct", "_ptr": true},
-			map[string]interface{}{"String": "test struct 2", "Int": 200.0, "Bool": true, "_type": "Struct", "_ptr": true},
+			map[string]interface{}{"String": "test struct", "Float": 0.0, "Uint": 0.0, "Int": 100.0, "Bool": true, "_type": "Struct", "_ptr": true},
+			map[string]interface{}{"String": "test struct 2", "Float": 0.0, "Uint": 0.0, "Int": 200.0, "Bool": true, "_type": "Struct", "_ptr": true},
 		},
 	}
 
@@ -730,7 +730,8 @@ func TestCopyAnyToJsonMap(t *testing.T) {
 		debugutil.PrintJson("result=", resultMap)
 		debugutil.PrintJson("target=", targetAny)
 		if reflect.DeepEqual(resultMap, targetAny) == false {
-			t.Error("not equal")
+			t.Error("not equal: " + strconv.Itoa(i))
+			return
 		}
 	}
 

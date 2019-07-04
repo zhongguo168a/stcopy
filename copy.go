@@ -696,26 +696,22 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 			if srcref.Type() != provideTyp {
 				switch provideTyp.Kind() {
 				case reflect.String:
-					x, err = convert2String(srcref)
-					if err != nil {
-						if srcref.Type().ConvertibleTo(provideTyp) {
-							x = srcref.Convert(provideTyp)
-						} else {
-							x = reflect.ValueOf("")
-						}
-					}
-
+					x = convert2String(srcref)
 				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 					fallthrough
 				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-					x = convert2Int(srcref, provideTyp)
+					x = convert2Int(srcref)
 				case reflect.Float32, reflect.Float64:
-					x = convert2Float(srcref, provideTyp)
+					x = convert2Float(srcref)
 				case reflect.Bool:
-					x = convert2Bool(srcref, provideTyp)
+					x = convert2Bool(srcref)
 				default:
 					err = errors.New("convert fail")
 					return
+				}
+
+				if srcref.Type().ConvertibleTo(provideTyp) {
+					x = srcref.Convert(provideTyp)
 				}
 			} else {
 				x = srcref
@@ -784,7 +780,6 @@ func (ctx *Context) callFromMethod(srcref, tarref reflect.Value, mname string, m
 	case 0:
 		result = tarref
 	case 1:
-
 		if mtype.Type.Out(0).Implements(errTyp) {
 			if tarref.Kind() != reflect.Ptr {
 				err = errors.New("目标非指针类型, 必须返回运行结果")
