@@ -709,8 +709,8 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 					return
 				}
 
-				if srcref.Type().ConvertibleTo(provideTyp) {
-					x = srcref.Convert(provideTyp)
+				if x.Type().ConvertibleTo(provideTyp) {
+					x = x.Convert(provideTyp)
 				}
 			} else {
 				x = srcref
