@@ -132,8 +132,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	}
 
 	// 处理base map
-	_, ok := ctx.baseMap[provideTyp.Name()]
-	if ok == true {
+	if ctx.baseMap.Contains(provideTyp) {
 		if tarref.CanSet() == false {
 			tarref = reflect.New(provideTyp)
 			if provideTyp.Kind() != reflect.Ptr {

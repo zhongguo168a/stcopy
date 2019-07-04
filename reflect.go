@@ -2,8 +2,8 @@ package stcopy
 
 import (
 	"errors"
+	"github.com/zhongguo168a/gocodes/utils/arrayutil"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -14,28 +14,29 @@ var (
 	stringTyp = reflect.TypeOf("")
 )
 
-func NewTypeMap(types ...reflect.Type) (r TypeMap) {
-	r = TypeMap{}
+func NewTypeSet(types ...reflect.Type) (r *TypeSet) {
+	r = &TypeSet{}
 	for _, val := range types {
-		r[val.Name()] = val
+		r.Add(val)
 	}
 	return
 }
 
-type TypeMap map[string]reflect.Type
-
-func (m TypeMap) GetKeys() (keys []string) {
-	for key := range m {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return
+type TypeSet struct {
+	arrayutil.ArrayList
 }
 
-func (m TypeMap) Add(types ...reflect.Type) {
-	for _, val := range types {
-		m[val.Name()] = val
+func (m *TypeSet) GetByName(n string) (typ reflect.Type, has bool) {
+	ityp, has := m.First(func(item interface{}) bool {
+		t := item.(reflect.Type)
+		return t.Name() == n
+	})
+
+	if has {
+		typ = ityp.(reflect.Type)
 	}
+
+	return
 }
 
 type Value reflect.Value
@@ -72,7 +73,7 @@ func (val Value) parseMapType(ctx *Context) (x reflect.Type, err error) {
 		}
 
 		str := istr.(string)
-		t, typok := ctx.typeMap[str]
+		t, typok := ctx.typeMap.GetByName(str)
 		if typok == false {
 			println("stcopy: parse map type: not found: " + str)
 			return

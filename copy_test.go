@@ -9,14 +9,14 @@ import (
 	"time"
 )
 
-var types = NewTypeMap(
+var types = NewTypeSet(
 	reflect.TypeOf(Struct{}),
 	reflect.TypeOf(StructOnCopyed{}),
 	reflect.TypeOf(StructOnCopyed2{}),
 	reflect.TypeOf(StructAny{}),
 )
 
-var baseTypes = NewTypeMap(
+var baseTypes = NewTypeSet(
 	reflect.TypeOf(time.Time{}),
 )
 

@@ -42,8 +42,9 @@ func NewValue(ref reflect.Value) (ctx *Context) {
 	}
 
 	ctx = &Context{
-		valueA: Value(ref),
-		Config: NewConfig(),
+		valueA:  Value(ref),
+		Config:  NewConfig(),
+		baseMap: NewTypeSet(),
 	}
 	return
 }
@@ -81,9 +82,9 @@ type Context struct {
 	// 配置
 	Config *Config
 	// 类型的映射
-	typeMap TypeMap
+	typeMap *TypeSet
 	// 视作base类型的类型
-	baseMap TypeMap
+	baseMap *TypeSet
 }
 
 func NewConfig() (obj *Config) {
@@ -133,12 +134,12 @@ func (ctx *Context) WithProvideTyp(val reflect.Type) *Context {
 	return ctx
 }
 
-func (ctx *Context) WithTypeMap(val TypeMap) *Context {
+func (ctx *Context) WithTypeMap(val *TypeSet) *Context {
 	ctx.typeMap = val
 	return ctx
 }
 
-func (ctx *Context) WithBaseTypes(val TypeMap) *Context {
+func (ctx *Context) WithBaseTypes(val *TypeSet) *Context {
 	ctx.baseMap = val
 	return ctx
 }
