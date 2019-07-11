@@ -3,11 +3,9 @@ package stcopy
 import (
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"github.com/zhongguo168a/gocodes/utils/stringutil"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
 func isHard(k reflect.Kind) bool {
@@ -113,17 +111,17 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	srcref := source.Upper()
 	tarref := target.Upper()
 	//
-	prefix := strings.Repeat("----", depth)
-	fmt.Println(prefix+"> copy:", "provide typ=", provideTyp, "kind=", provideTyp.Kind())
-	fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref)
-	fmt.Println(prefix+"copy: tartyp=", target.GetTypeString(), "tar=", tarref, "nil=", ",  canset=", tarref.CanSet(), func() (x string) {
-		if isHard(tarref.Kind()) && tarref.IsNil() {
-			x = "isnil=true"
-		} else {
-			x = "isnil=false"
-		}
-		return
-	}())
+	//prefix := strings.Repeat("----", depth)
+	//fmt.Println(prefix+"> copy:", "provide typ=", provideTyp, "kind=", provideTyp.Kind())
+	//fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref)
+	//fmt.Println(prefix+"copy: tartyp=", target.GetTypeString(), "tar=", tarref, "nil=", ",  canset=", tarref.CanSet(), func() (x string) {
+	//	if isHard(tarref.Kind()) && tarref.IsNil() {
+	//		x = "isnil=true"
+	//	} else {
+	//		x = "isnil=false"
+	//	}
+	//	return
+	//}())
 
 	// 源是否空
 	if srcref.IsValid() == false {
@@ -206,14 +204,14 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 		}
 
 		source = Value(srcref)
-		fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref, ",  canset=", srcref.CanSet(), func() (x string) {
-			if isHard(srcref.Kind()) && srcref.IsNil() {
-				x = "isnil=true"
-			} else {
-				x = "isnil=false"
-			}
-			return
-		}(), "<last>")
+		//fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref, ",  canset=", srcref.CanSet(), func() (x string) {
+		//	if isHard(srcref.Kind()) && srcref.IsNil() {
+		//		x = "isnil=true"
+		//	} else {
+		//		x = "isnil=false"
+		//	}
+		//	return
+		//}(), "<last>")
 	}
 
 	// 检查目标是否需要创建新的值
@@ -365,14 +363,14 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 
 		target = Value(tarref)
 		//
-		fmt.Println(prefix+"copy: tartyp=", tarref.Type(), "tar=", tarref, ",  canset=", tarref.CanSet(), func() (x string) {
-			if isHard(tarref.Kind()) && tarref.IsNil() {
-				x = "isnil=true"
-			} else {
-				x = "isnil=false"
-			}
-			return
-		}(), "<last>")
+		//fmt.Println(prefix+"copy: tartyp=", tarref.Type(), "tar=", tarref, ",  canset=", tarref.CanSet(), func() (x string) {
+		//	if isHard(tarref.Kind()) && tarref.IsNil() {
+		//		x = "isnil=true"
+		//	} else {
+		//		x = "isnil=false"
+		//	}
+		//	return
+		//}(), "<last>")
 	}
 
 	// 如果源与目标的类型不一致
