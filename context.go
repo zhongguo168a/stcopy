@@ -78,7 +78,7 @@ type Context struct {
 	// 规定的类型
 	provideTyp reflect.Type
 	// 自定义的参数, 传递给转化函数使用
-	Params interface{}
+	params interface{}
 	// 配置
 	Config *Config
 	// 类型的映射
@@ -129,6 +129,10 @@ func (ctx *Context) getProvideTyp(src, tar Value) (typ reflect.Type, err error) 
 	return
 }
 
+func (ctx *Context) GetParams() interface{} {
+	return ctx.params
+}
+
 func (ctx *Context) WithProvideTyp(val reflect.Type) *Context {
 	ctx.provideTyp = val
 	return ctx
@@ -145,7 +149,7 @@ func (ctx *Context) WithBaseTypes(val *TypeSet) *Context {
 }
 
 func (ctx *Context) WithParams(val interface{}) *Context {
-	ctx.Params = reflect.ValueOf(val)
+	ctx.params = val
 	return ctx
 }
 
