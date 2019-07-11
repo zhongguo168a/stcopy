@@ -50,6 +50,12 @@ func convert2Int(val reflect.Value) (r reflect.Value) {
 		} else {
 			r = reflect.ValueOf(i)
 		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		r = reflect.ValueOf(int(val.Uint()))
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		r = reflect.ValueOf(val.Int())
+	case reflect.Float32, reflect.Float64:
+		r = reflect.ValueOf(int(val.Float()))
 	default:
 		r = reflect.ValueOf(0)
 	}
@@ -66,6 +72,12 @@ func convert2Float(val reflect.Value) (r reflect.Value) {
 		} else {
 			r = reflect.ValueOf(i)
 		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		r = reflect.ValueOf(float64(val.Uint()))
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		r = reflect.ValueOf(float64(val.Int()))
+	case reflect.Float32, reflect.Float64:
+		r = reflect.ValueOf(float64(val.Float()))
 	default:
 		r = reflect.ValueOf(0.0)
 	}
@@ -82,6 +94,12 @@ func convert2Bool(val reflect.Value) (r reflect.Value) {
 		} else {
 			r = reflect.ValueOf(false)
 		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		r = reflect.ValueOf(float64(val.Int()))
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		r = reflect.ValueOf(val.Int() > 0)
+	case reflect.Float32, reflect.Float64:
+		r = reflect.ValueOf(val.Int() > 0)
 	default:
 		r = reflect.ValueOf(false)
 	}
