@@ -770,11 +770,6 @@ func (ctx *Context) callFromMethod(srcref, tarref reflect.Value, mname string, m
 
 	results := func() (x []reflect.Value) {
 		if mtype.Type.NumIn() == 3 {
-			arg2 := mtype.Type.Field(2).Type
-			if srcref.Type() != arg2 {
-				err = errors.New("func " + mname + "'s argument 2: " + arg2.Name() + " not match")
-				return
-			}
 			x = methodVal.Call([]reflect.Value{reflect.ValueOf(ctx), srcref})
 		} else {
 			x = methodVal.Call([]reflect.Value{srcref})
