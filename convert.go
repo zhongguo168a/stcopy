@@ -8,10 +8,24 @@ import (
 // 转化成map类型的值
 func convert2MapValue(val reflect.Value) (r reflect.Value) {
 	switch val.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+	case reflect.Int8, reflect.Int16, reflect.Int32:
 		r = reflect.ValueOf(float64(val.Int()))
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32:
 		r = reflect.ValueOf(float64(val.Uint()))
+	case reflect.Int, reflect.Int64:
+		a := val.Int()
+		if a > 2147483647 {
+			r = reflect.ValueOf(strconv.Itoa(int(a)))
+		} else {
+			r = reflect.ValueOf(float64(a))
+		}
+	case reflect.Uint, reflect.Uint64:
+		a := val.Uint()
+		if a > 4294967295 {
+			r = reflect.ValueOf(strconv.Itoa(int(a)))
+		} else {
+			r = reflect.ValueOf(float64(a))
+		}
 	case reflect.Float32, reflect.Float64:
 		r = reflect.ValueOf(val.Float())
 	case reflect.Bool:
