@@ -16,14 +16,18 @@ var (
 
 func NewTypeSet(types ...reflect.Type) (r *TypeSet) {
 	r = &TypeSet{}
-	for _, val := range types {
-		r.Add(val)
-	}
+	r.Add(types...)
 	return
 }
 
 type TypeSet struct {
 	arrayutil.ArrayList
+}
+
+func (m *TypeSet) Add(items ...reflect.Type) {
+	for _, val := range items {
+		m.ArrayList.Add(val)
+	}
 }
 
 func (m *TypeSet) GetByName(n string) (typ reflect.Type, has bool) {

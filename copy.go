@@ -3,9 +3,11 @@ package stcopy
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"github.com/zhongguo168a/gocodes/utils/stringutil"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 func isHard(k reflect.Kind) bool {
@@ -111,17 +113,17 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	srcref := source.Upper()
 	tarref := target.Upper()
 	//
-	//prefix := strings.Repeat("----", depth)
-	//fmt.Println(prefix+"> copy:", "provide typ=", provideTyp, "kind=", provideTyp.Kind())
-	//fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref)
-	//fmt.Println(prefix+"copy: tartyp=", target.GetTypeString(), "tar=", tarref, "nil=", ",  canset=", tarref.CanSet(), func() (x string) {
-	//	if isHard(tarref.Kind()) && tarref.IsNil() {
-	//		x = "isnil=true"
-	//	} else {
-	//		x = "isnil=false"
-	//	}
-	//	return
-	//}())
+	prefix := strings.Repeat("----", depth)
+	fmt.Println(prefix+"> copy:", "provide typ=", provideTyp, "kind=", provideTyp.Kind())
+	fmt.Println(prefix+"copy: srctyp=", srcref.Type(), "src=", srcref)
+	fmt.Println(prefix+"copy: tartyp=", target.GetTypeString(), "tar=", tarref, "nil=", ",  canset=", tarref.CanSet(), func() (x string) {
+		if isHard(tarref.Kind()) && tarref.IsNil() {
+			x = "isnil=true"
+		} else {
+			x = "isnil=false"
+		}
+		return
+	}())
 
 	// 源是否空
 	if srcref.IsValid() == false {
@@ -294,16 +296,6 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 					}
 
 				}
-				//if isHard(provideTyp.Elem().Kind()) {
-				//	slice := make([]interface{}, srcref.Len(), srcref.Cap())
-				//	x = reflect.ValueOf(slice)
-				//} else {
-				//	if srcref.Kind() == reflect.String {
-				//		x = reflect.MakeSlice(provideTyp, 0, 0)
-				//	} else {
-				//		x = reflect.MakeSlice(provideTyp, srcref.Len(), srcref.Cap())
-				//	}
-				//}
 
 				return
 			}()
@@ -318,16 +310,6 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 			case StructToStruct:
 				tarref = reflect.MakeMap(unfold)
 			case JsonMapToStruct:
-				//if inInterface {
-				//	tarref = func() (y reflect.Value) {
-				//		if provideTyp.Kind() == reflect.Ptr {
-				//			y = reflect.ValueOf(&map[string]interface{}{})
-				//		} else {
-				//			y = reflect.ValueOf(map[string]interface{}{})
-				//		}
-				//		return
-				//	}()
-				//} else {
 				tarref = func() (x reflect.Value) {
 					if provideTyp.Kind() == reflect.Ptr {
 						x = reflect.New(provideTyp.Elem()).Elem()
@@ -373,7 +355,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 		//}(), "<last>")
 	}
 
-	// 如果源与目标的类型不一致
+	// 如果存在To/From函数, 执行并返回结果
 	switch ctx.direction {
 	case AtoB:
 		mtype, ok := srcref.Type().MethodByName("To")
@@ -421,22 +403,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 						err = copyerr
 						return
 					}
-					//err = retval.updateMapStructTypeBy(Value(srcitem))
-					//if err != nil {
-					//	return
-					//}
-					//if retval.Indirect().Upper().Kind() == reflect.Map {
-					//	err = retval.updateMapStructTypeBy(Value(srcitem))
-					//	if err != nil {
-					//		return
-					//	}
-					//
-					//	err = retval.updateMapPtrBy(Value(srcitem))
-					//	if err != nil {
-					//		return
-					//	}
-					//}
-					//
+
 					tarref.Index(i).Set(retval.Upper())
 				}
 			}
@@ -505,14 +472,19 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 				return
 			}
 		}
-		//err = retval.updateMapStructPtrBy(Value(srcref.Elem()))
-		//if err != nil {
-		//	return
-		//}
+
 		if tarref.CanSet() {
 			tarref.Set(retval.Upper())
 		}
 	case reflect.Ptr:
+		switch ctx.convertType {
+		case AnyToJsonMap:
+			err = TypeUtiler.Call(srcref, "CopyBefore", ctx)
+			if err != nil {
+				return
+			}
+		}
+
 		srcptr := func() (x Value) {
 			if srcref.Kind() == reflect.Ptr {
 				x = Value(srcref.Elem())
@@ -556,11 +528,12 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 					tarref = tarref.Elem()
 				}
 			}
+			err = TypeUtiler.Call(tarref, "CopyAfter", ctx)
+			if err != nil {
+				return
+			}
 		}
 
-		//if tarref.CanSet() {
-		//	tarref.Set(retval.Upper().Addr())
-		//}
 	case reflect.Struct:
 		for _, field := range TypeUtiler.GetFieldRecursion(provideTyp) {
 			if stringutil.IsLowerFirst(field.Name) {
@@ -646,7 +619,9 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 					return
 				}
 			}
+		case JsonMapToStruct:
 		}
+
 	case reflect.Map:
 		for _, keySrc := range srcref.MapKeys() {
 			//fmt.Println(prefix+"map: before copy key source: type=", keySrc.Type(), ", val=", keySrc.Interface())
@@ -722,11 +697,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 			tarref = convert2MapValue(tarref)
 		}
 	}
-	// 执行初始化函数
-	err = TypeUtiler.Call(tarref, "OnCopyed", ctx)
-	if err != nil {
-		return
-	}
+
 	result = Value(tarref)
 
 	//fmt.Println("resut >", result.Upper())

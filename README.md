@@ -114,7 +114,8 @@ func main(){
 * 如果属性中存在不需要/无法拷贝的类型(例如time.Time), 可以通过设置BaseTypes, 像int类型一样, 直接赋值过去 
 * 可使用tag: stcopy:"ignore", 忽略该属性的拷贝
 * 提供了Valid()方法, 深度优先, 遍历所有属性的Valid()方法(如果存在)
-* 执行To/From方法时, 深度优先, 遍历所有属性的OnCopyed()方法(如果存在) 
+* 执行To/From方法时, 深度优先
+* 提供了CopyBefore()和CopyAfter()方法, 在转换前/后执行
 ```go
 // ignore标签与深度优先的例子
 package main
@@ -132,7 +133,7 @@ type Config struct {
     //
     St *Struct // 没有忽略
 }
-func (c *Config) OnCopyed() {// 深度优先, 最后执行, Valid()方法同理
+func (c *Config) CopyAfter() {// 深度优先, 最后执行, Valid()方法同理
     c.States = strings.Split(c.State, "|")
     c.St.Int = c.St.Int * 2 // 20 * 2 = 40
 }
@@ -148,7 +149,7 @@ type Struct struct{
     IgnoreField interface{} `stcopy:"ignore"` // 结构内部也可以使用
 }
 
-func (s *Struct) OnCopyed() {// 深度优先, 首先执行, Valid()方法同理
+func (s *Struct) CopyAfter() {// 深度优先, 首先执行, Valid()方法同理
     s.Int = s.Int * 2 // 10 * 2 = 20
 }
 

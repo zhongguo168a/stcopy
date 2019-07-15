@@ -60,16 +60,20 @@ const (
 type ConvertType int
 
 const (
+	// struct->map
+	// map->map
 	AnyToJsonMap ConvertType = iota
+	// map->struct
 	JsonMapToStruct
+	// struct->struct
 	StructToStruct
 )
 
 // 数据源的上下文
 type Context struct {
-	// 值A
+	// 值A-New()方法赋值
 	valueA Value
-	// 值B
+	// 值B-To/From()方法赋值
 	valueB Value
 	// copy方向
 	direction Direction
@@ -93,10 +97,6 @@ func NewConfig() (obj *Config) {
 }
 
 type Config struct {
-	// 是否把枚举的值, 转成枚举的名字, 否则, 转化成枚举的值
-	// 用于转化成配置文件的时候, 便于查阅
-	// 需要使用 @description 标签的支持
-	EnumToName bool
 	// 转换成map时, 检查FieldTag定义的名字, 例如json/bson, 根据FieldTag转换成对应的Field名字
 	// 例如在Id 字段 定义了bson:"_id", 转换后的map["Id"] 变成 map["_id"]
 	FieldTag string
