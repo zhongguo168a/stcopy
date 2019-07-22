@@ -20,6 +20,8 @@ func (ctx *Context) Compare(val interface{}) []error {
 // 深度比较, 与目标的类型和值必须完全一致
 func (ctx *Context) CompareDeep(val interface{}) []error {
 	ctx.compareErrors = ctx.compareErrors[:0]
+	ctx.compareType = true
+	ctx.compareAll = true
 	ctx.compare(ctx.valueA, Value(reflect.ValueOf(val)), "ROOT", 0)
 	return ctx.compareErrors
 }
@@ -48,7 +50,7 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 		}
 	}
 
-	if tarref.Type().Kind() != reflect.Func {
+	if ctx.compareType {
 		// 检查类型是否匹配
 		if srcref.Type() != tarref.Type() {
 			ctx.addCompareError(errors.New(path + ": type not match: " + srcref.Type().String() + " !=" + tarref.Type().String() + "(s/t)"))
