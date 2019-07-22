@@ -61,10 +61,16 @@ func TestContext_CompareExpr(t *testing.T) {
 		//	"ROOT/Int: not equal expr: src=10",
 		//},
 		//
-		&map[string]interface{}{"Map": map[string]interface{}{"Int": 10}},
-		&map[string]interface{}{"Map": map[string]interface{}{"Int": GreaterThan(11)}},
+		//&map[string]interface{}{"Map": map[string]interface{}{"Int": 10}},
+		//&map[string]interface{}{"Map": map[string]interface{}{"Int": GreaterThan(11)}},
+		//[]string{
+		//	"ROOT/Map/Int: not equal expr: src=10",
+		//},
+		//
+		&Struct{Int: 10},
+		&map[string]interface{}{"Int": GreaterThan(11)},
 		[]string{
-			"ROOT/Map/Int: not equal expr: src=10",
+			"ROOT/Int: not equal expr: src=10",
 		},
 	}
 

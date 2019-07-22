@@ -110,6 +110,9 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 	case reflect.Func:
 		panic("not suppor")
 	default:
+		if tarref.Kind() == reflect.Interface {
+			tarref = tarref.Elem()
+		}
 		if tarref.Kind() == reflect.Func {
 			exprResult := tarref.Call([]reflect.Value{srcref})
 			bRef := exprResult[0]

@@ -2,7 +2,6 @@ package stcopy
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 )
 
@@ -37,9 +36,7 @@ func NewValue(ref reflect.Value) (ctx *Context) {
 		panic(errors.New("origin must ptr struct or map"))
 	}
 
-	fmt.Println("context[44]>", ref.Type().Kind())
 	unfold := TypeUtiler.UnfoldType(ref.Type())
-	fmt.Println("context[44]>", unfold.Kind())
 	if unfold.Kind() != reflect.Struct && unfold.Kind() != reflect.Map {
 		panic(errors.New("origin must ptr struct or map"))
 	}
