@@ -94,6 +94,10 @@ type Context struct {
 	baseMap *TypeSet
 	//
 	compareErrors []error
+	// 是否比较类型
+	compareType bool
+	// 是否比较所有字段
+	compareAll bool
 }
 
 func NewConfig() (obj *Config) {

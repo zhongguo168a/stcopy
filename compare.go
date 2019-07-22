@@ -2,19 +2,25 @@ package stcopy
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
 func (ctx *Context) addCompareError(err error) {
 	ctx.compareErrors = append(ctx.compareErrors, err)
 }
 
+// 比较目标中[val]包含的表达式
 func (ctx *Context) Compare(val interface{}) []error {
 	ctx.compareErrors = ctx.compareErrors[:0]
-	ctx.compare(ctx.valueA, Value(reflect.ValueOf(val)), "", 0)
+	ctx.compare(ctx.valueA, Value(reflect.ValueOf(val)), "ROOT", 0)
+	return ctx.compareErrors
+}
+
+// 深度比较, 与目标的类型和值必须完全一致
+func (ctx *Context) CompareDeep(val interface{}) []error {
+	ctx.compareErrors = ctx.compareErrors[:0]
+	ctx.compare(ctx.valueA, Value(reflect.ValueOf(val)), "ROOT", 0)
 	return ctx.compareErrors
 }
 
@@ -22,16 +28,16 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 	srcref := source.Upper()
 	tarref := target.Upper()
 
-	prefix := strings.Repeat("----", depth)
-	fmt.Println(prefix+"> compare: srctyp=", srcref.Type(), "src=", srcref)
-	fmt.Println(prefix+"compare: tartyp=", target.GetTypeString(), "tar=", tarref, "nil=", ",  canset=", tarref.CanSet(), func() (x string) {
-		if isHard(tarref.Kind()) && tarref.IsNil() {
-			x = "isnil=true"
-		} else {
-			x = "isnil=false"
-		}
-		return
-	}())
+	//prefix := strings.Repeat("----", depth)
+	//fmt.Println(prefix+"> compare: srctyp=", srcref.Type(), "src=", srcref)
+	//fmt.Println(prefix+"compare: tartyp=", target.GetTypeString(), "tar=", tarref, "nil=", ",  canset=", tarref.CanSet(), func() (x string) {
+	//	if isHard(tarref.Kind()) && tarref.IsNil() {
+	//		x = "isnil=true"
+	//	} else {
+	//		x = "isnil=false"
+	//	}
+	//	return
+	//}())
 
 	if srcref.IsValid() == false && tarref.IsValid() == false {
 		return
@@ -42,9 +48,12 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 		}
 	}
 
-	if srcref.Type() != tarref.Type() {
-		ctx.addCompareError(errors.New(path + ": type not match: " + srcref.Type().String() + " !=" + tarref.Type().String() + "(s/t)"))
-		return
+	if tarref.Type().Kind() != reflect.Func {
+		// 检查类型是否匹配
+		if srcref.Type() != tarref.Type() {
+			ctx.addCompareError(errors.New(path + ": type not match: " + srcref.Type().String() + " !=" + tarref.Type().String() + "(s/t)"))
+			return
+		}
 	}
 
 	switch srcref.Type().Kind() {
@@ -78,15 +87,16 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 				}
 			}
 
-			fmt.Println(">>> compare struct field: ", field.Name, ", fieldtyp=", field.Type)
+			//fmt.Println(">>> compare struct field: ", field.Name, ", fieldtyp=", field.Type)
 			ctx.compare(Value(srcfield), Value(tarfield), path+"/"+field.Name, depth+1)
 		}
 	case reflect.Map:
-		if len(srcref.MapKeys()) != len(tarref.MapKeys()) {
-			ctx.addCompareError(errors.New(path + ": keys not equal: " + strconv.Itoa(len(srcref.MapKeys())) + " !=" + strconv.Itoa(len(tarref.MapKeys())) + "(s/t)"))
-			return
+		if ctx.compareAll {
+			if len(srcref.MapKeys()) != len(tarref.MapKeys()) {
+				ctx.addCompareError(errors.New(path + ": keys not equal: " + strconv.Itoa(len(srcref.MapKeys())) + " !=" + strconv.Itoa(len(tarref.MapKeys())) + "(s/t)"))
+				return
+			}
 		}
-
 		for _, k := range srcref.MapKeys() {
 			val1 := srcref.MapIndex(k)
 			val2 := tarref.MapIndex(k)
@@ -98,9 +108,18 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 	case reflect.Func:
 		panic("not suppor")
 	default:
-		if reflect.DeepEqual(srcref.Interface(), tarref.Interface()) == false {
-			ctx.addCompareError(errors.New(path + ": not equal: " + convert2String(srcref).String() + " !=" + convert2String(tarref).String() + "(s/t)"))
-			return
+		if tarref.Kind() == reflect.Func {
+			exprResult := tarref.Call([]reflect.Value{srcref})
+			bRef := exprResult[0]
+			if bRef.Bool() == false {
+				ctx.addCompareError(errors.New(path + ": not equal expr: src=" + convert2String(srcref).String()))
+				return
+			}
+		} else {
+			if reflect.DeepEqual(srcref.Interface(), tarref.Interface()) == false {
+				ctx.addCompareError(errors.New(path + ": not equal: " + convert2String(srcref).String() + " !=" + convert2String(tarref).String() + "(s/t)"))
+				return
+			}
 		}
 	}
 	return
