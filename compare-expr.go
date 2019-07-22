@@ -82,6 +82,20 @@ func NotEqualTo(number int, scale ...float64) (r Expr) {
 	return
 }
 
+func EqualTo(number int, scale ...float64) (r Expr) {
+	s := func() (x float64) {
+		if len(scale) > 0 {
+			return scale[0]
+		}
+		return 1
+	}()
+
+	r = func(val interface{}) bool {
+		return int(s*convert2FloatNotReflect(val)) == number
+	}
+	return
+}
+
 func Regexp(exp string) (r Expr) {
 	re := regexp.MustCompile(exp)
 	r = func(val interface{}) bool {

@@ -227,7 +227,7 @@ func convert2FloatNotReflect(val interface{}) (r float64) {
 	case float64:
 		r = float64(a)
 	default:
-		r = 0.0
+		r = a.(float64)
 	}
 
 	return
