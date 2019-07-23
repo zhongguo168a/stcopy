@@ -366,7 +366,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 				err = callerr
 				return
 			}
-			if copyctx.ignoreTo == false {
+			if copyctx.ignore == false {
 				result = Value(r)
 				return
 			}
@@ -383,7 +383,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 					err = callerr
 					return
 				}
-				if copyctx.ignoreFrom == false {
+				if copyctx.ignore == false {
 					result = Value(r)
 					return
 				}
