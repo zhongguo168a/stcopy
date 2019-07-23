@@ -175,21 +175,18 @@ func (ctx *Context) WithIgnoreDefault() *Context {
 //
 type CopyContext struct {
 	//
-	ignoreTo bool
+	ignore bool
 
-	ignoreFrom bool
 	//
 	origin *Context
 }
 
-func (ctx *CopyContext) IgnoreTo() {
-	ctx.ignoreTo = true
+func (ctx *CopyContext) Ignore() {
+	ctx.ignore = true
 }
 
-func (ctx *CopyContext) IgnoreFrom() {
-	ctx.ignoreFrom = true
-}
-
-func (ctx *CopyContext) GetParams() map[string]interface{} {
+// 获取参数
+// 可使用maputil操作
+func (ctx *CopyContext) Params() map[string]interface{} {
 	return ctx.origin.params
 }
