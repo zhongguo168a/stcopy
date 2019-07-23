@@ -135,10 +135,6 @@ func (ctx *Context) getProvideTyp(src, tar Value) (typ reflect.Type, err error) 
 	return
 }
 
-func (ctx *Context) GetParams() map[string]interface{} {
-	return ctx.params
-}
-
 func (ctx *Context) WithProvideTyp(val reflect.Type) *Context {
 	ctx.provideTyp = val
 	return ctx
@@ -172,4 +168,28 @@ func (ctx *Context) WithFieldTag(tag string) *Context {
 func (ctx *Context) WithIgnoreDefault() *Context {
 	ctx.Config.IgnoreDefault = true
 	return ctx
+}
+
+// ==============================================================
+//
+//
+type CopyContext struct {
+	//
+	ignoreTo bool
+
+	ignoreFrom bool
+	//
+	origin *Context
+}
+
+func (ctx *CopyContext) IgnoreTo() {
+	ctx.ignoreTo = true
+}
+
+func (ctx *CopyContext) IgnoreFrom() {
+	ctx.ignoreFrom = true
+}
+
+func (ctx *CopyContext) GetParams() map[string]interface{} {
+	return ctx.origin.params
 }

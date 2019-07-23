@@ -146,13 +146,13 @@ type Convert struct {
 	Int int16
 }
 
-func (s *Convert) To(ctx *Context) (r string) {
+func (s *Convert) To(ctx *CopyContext) (r string) {
 	b, _ := json.Marshal(s)
 	r = string(b)
 	return
 }
 
-func (s *Convert) From(ctx *Context, val interface{}) (err error) {
+func (s *Convert) From(ctx *CopyContext, val interface{}) (err error) {
 	err = json.Unmarshal([]byte(val.(string)), &s)
 	if err != nil {
 		return
@@ -164,11 +164,11 @@ type ConvertMap struct {
 	Int int16
 }
 
-func (s *ConvertMap) ToMap(ctx *Context) (r map[string]interface{}) {
+func (s *ConvertMap) ToMap(ctx *CopyContext) (r map[string]interface{}) {
 	return
 }
 
-func (s *ConvertMap) FromMap(ctx *Context, val map[string]interface{}) (err error) {
+func (s *ConvertMap) FromMap(ctx *CopyContext, val map[string]interface{}) (err error) {
 	return
 }
 

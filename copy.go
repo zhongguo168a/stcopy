@@ -358,25 +358,35 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	case AtoB:
 		mtype, ok := srcref.Type().MethodByName("To")
 		if ok == true {
-			r, callerr := ctx.callToMethod(srcref, "To", mtype)
+			copyctx := &CopyContext{
+				origin: ctx,
+			}
+			r, callerr := ctx.callToMethod(copyctx, srcref, "To", mtype)
 			if callerr != nil {
 				err = callerr
 				return
 			}
-			result = Value(r)
-			return
+			if copyctx.ignoreTo == false {
+				result = Value(r)
+				return
+			}
 		}
 	case AfromB:
 		if tarref.IsValid() == true {
 			mtype, ok := tarref.Type().MethodByName("From")
 			if ok == true {
-				r, callerr := ctx.callFromMethod(srcref, tarref, "From", mtype)
+				copyctx := &CopyContext{
+					origin: ctx,
+				}
+				r, callerr := ctx.callFromMethod(copyctx, srcref, tarref, "From", mtype)
 				if callerr != nil {
 					err = callerr
 					return
 				}
-				result = Value(r)
-				return
+				if copyctx.ignoreFrom == false {
+					result = Value(r)
+					return
+				}
 			}
 		}
 	}
@@ -702,7 +712,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 	return
 }
 
-func (ctx *Context) callToMethod(srcref reflect.Value, mname string, mtype reflect.Method) (result reflect.Value, err error) {
+func (ctx *Context) callToMethod(copyctx *CopyContext, srcref reflect.Value, mname string, mtype reflect.Method) (result reflect.Value, err error) {
 	methodVal := srcref.MethodByName(mname)
 	if mtype.Type.NumIn() > 2 {
 		err = errors.New("func " + mname + " NumIn() must 1 or 0")
@@ -710,7 +720,7 @@ func (ctx *Context) callToMethod(srcref reflect.Value, mname string, mtype refle
 	}
 	results := func() (x []reflect.Value) {
 		if mtype.Type.NumIn() == 2 {
-			x = methodVal.Call([]reflect.Value{reflect.ValueOf(ctx)})
+			x = methodVal.Call([]reflect.Value{reflect.ValueOf(copyctx)})
 
 		} else {
 			x = methodVal.Call([]reflect.Value{})
@@ -728,7 +738,7 @@ func (ctx *Context) callToMethod(srcref reflect.Value, mname string, mtype refle
 	return
 }
 
-func (ctx *Context) callFromMethod(srcref, tarref reflect.Value, mname string, mtype reflect.Method) (result reflect.Value, err error) {
+func (ctx *Context) callFromMethod(copyctx *CopyContext, srcref, tarref reflect.Value, mname string, mtype reflect.Method) (result reflect.Value, err error) {
 	methodVal := tarref.MethodByName(mname)
 	if mtype.Type.NumIn() > 3 || mtype.Type.NumIn() == 1 {
 		err = errors.New("func " + mname + " NumIn() must 2 or 1")
@@ -737,7 +747,7 @@ func (ctx *Context) callFromMethod(srcref, tarref reflect.Value, mname string, m
 
 	results := func() (x []reflect.Value) {
 		if mtype.Type.NumIn() == 3 {
-			x = methodVal.Call([]reflect.Value{reflect.ValueOf(ctx), srcref})
+			x = methodVal.Call([]reflect.Value{reflect.ValueOf(copyctx), srcref})
 		} else {
 			x = methodVal.Call([]reflect.Value{srcref})
 		}
