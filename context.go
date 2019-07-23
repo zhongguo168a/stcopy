@@ -83,6 +83,8 @@ type Context struct {
 	provideTyp reflect.Type
 	// 自定义的参数, 传递给转化函数使用
 	params map[string]interface{}
+	// 进行中的标签
+	inProcess string
 	// 配置
 	Config *Config
 	// 类型的映射
@@ -170,6 +172,11 @@ func (ctx *Context) WithIgnoreDefault() *Context {
 	return ctx
 }
 
+func (ctx *Context) InProcess(tag string) *Context {
+	ctx.inProcess = tag
+	return ctx
+}
+
 // ==============================================================
 //
 //
@@ -189,4 +196,10 @@ func (ctx *CopyContext) Ignore() {
 // 可使用maputil操作
 func (ctx *CopyContext) Params() map[string]interface{} {
 	return ctx.origin.params
+}
+
+// 获取参数
+// 可使用maputil操作
+func (ctx *CopyContext) InProcess(tag string) bool {
+	return ctx.origin.inProcess == tag
 }
