@@ -203,3 +203,7 @@ func (ctx *CopyContext) Params() map[string]interface{} {
 func (ctx *CopyContext) InProcess(tag string) bool {
 	return ctx.origin.inProcess == tag
 }
+
+func (ctx *CopyContext) Process() string {
+	return ctx.origin.inProcess
+}
