@@ -80,8 +80,8 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 	case reflect.Ptr:
 		ctx.compare(Value(srcref.Elem()), Value(tarref.Elem()), path, depth+1)
 	case reflect.Struct:
-		if srcref.Kind() != tarref.Kind() {
-			ctx.addCompareError(errors.New(path + ": type not match: " + srcref.Type().String() + " !=" + tarref.Type().String() + "(s/t)"))
+		if tarref.Kind() != reflect.Struct || tarref.Kind() != reflect.Map {
+			ctx.addCompareError(errors.New(path + ": target type must be struct or map: type=" + tarref.Type().String() + ""))
 			return
 		}
 
