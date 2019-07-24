@@ -57,6 +57,12 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 			return
 		}
 	}
+	if srcref.Kind() == reflect.Interface {
+		srcref = srcref.Elem()
+	}
+	if tarref.Kind() == reflect.Interface {
+		tarref = tarref.Elem()
+	}
 
 	switch srcref.Type().Kind() {
 	case reflect.Slice, reflect.Array:
@@ -74,6 +80,11 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 	case reflect.Ptr:
 		ctx.compare(Value(srcref.Elem()), Value(tarref.Elem()), path, depth+1)
 	case reflect.Struct:
+		if srcref.Kind() != tarref.Kind() {
+			ctx.addCompareError(errors.New(path + ": type not match: " + srcref.Type().String() + " !=" + tarref.Type().String() + "(s/t)"))
+			return
+		}
+
 		for _, field := range TypeUtiler.GetFieldRecursion(srcref.Type()) {
 			srcfield := getFieldVal(srcref, field)
 			if srcref.Kind() == reflect.Map {
@@ -110,9 +121,7 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 	case reflect.Func:
 		panic("not suppor")
 	default:
-		if tarref.Kind() == reflect.Interface {
-			tarref = tarref.Elem()
-		}
+
 		if tarref.Kind() == reflect.Func {
 			exprResult := tarref.Call([]reflect.Value{srcref})
 			bRef := exprResult[0]
