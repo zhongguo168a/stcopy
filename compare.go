@@ -94,9 +94,16 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 			}
 			//
 			tarfield := getFieldVal(tarref, field)
-			if tarref.Kind() == reflect.Map {
+			switch tarref.Kind() {
+			case reflect.Map:
 				if tarfield.IsValid() == false || tarfield.IsNil() {
 					continue
+				}
+			case reflect.Struct:
+				if ctx.Config.IgnoreDefault {
+					if TypeUtiler.CompareEqualDefault(srcfield, field) {
+						continue
+					}
 				}
 			}
 

@@ -579,7 +579,6 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 				if TypeUtiler.CompareEqualDefault(srcfield, field) {
 					continue
 				}
-
 			}
 
 			//fmt.Println(prefix+"struct: field=", field.Name, ", fieldtyp=", field.Type)
