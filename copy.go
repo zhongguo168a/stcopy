@@ -289,7 +289,9 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 								x = reflect.MakeSlice(provideTyp, srcref.Len(), srcref.Cap())
 							}
 						} else {
-							x = reflect.MakeSlice(provideTyp, srcref.Len(), srcref.Cap())
+							if srcref.Kind() == reflect.Slice || srcref.Kind() == reflect.Array {
+								x = reflect.MakeSlice(provideTyp, srcref.Len(), srcref.Cap())
+							}
 						}
 					}
 
