@@ -367,6 +367,9 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 				return
 			}
 			if copyctx.ignore == false {
+				if r.Kind() == reflect.Interface {
+					r = r.Elem()
+				}
 				result = Value(r)
 				return
 			}
@@ -384,6 +387,9 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 					return
 				}
 				if copyctx.ignore == false {
+					if r.Kind() == reflect.Interface {
+						r = r.Elem()
+					}
 					result = Value(r)
 					return
 				}
