@@ -205,6 +205,7 @@ func (*typeUtil) CompareEqualDefault(value reflect.Value, field *reflect.StructF
 	}
 
 	zero := reflect.Zero(field.Type)
+
 	return value.Interface() == zero.Interface()
 }
 
