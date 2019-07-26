@@ -93,13 +93,6 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 				}
 			}
 			//
-			_, has := tarref.Type().FieldByName(field.Name)
-			if has == false {
-				if ctx.compareAll {
-					ctx.addCompareError(errors.New(path + ": target not field: " + field.Name))
-				}
-				continue
-			}
 
 			tarfield := getFieldVal(tarref, field)
 			switch tarref.Kind() {
@@ -108,6 +101,13 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 					continue
 				}
 			case reflect.Struct:
+				_, has := tarref.Type().FieldByName(field.Name)
+				if has == false {
+					if ctx.compareAll {
+						ctx.addCompareError(errors.New(path + ": target not field: " + field.Name))
+					}
+					continue
+				}
 				if ctx.Config.IgnoreDefault {
 					if TypeUtiler.CompareEqualDefault(tarfield, field) {
 						continue
