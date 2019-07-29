@@ -141,12 +141,12 @@ func (ctx *Context) compare(source, target Value, path string, depth int) {
 			exprResult := tarref.Call([]reflect.Value{srcref})
 			bRef := exprResult[0]
 			if bRef.Bool() == false {
-				ctx.addCompareError(errors.New(path + ": not equal expr: src=" + convert2String(srcref).String()))
+				ctx.addCompareError(errors.New(path + ": not equal expr: src=" + Convert2String(srcref).String()))
 				return
 			}
 		} else {
 			if reflect.DeepEqual(srcref.Interface(), tarref.Interface()) == false {
-				ctx.addCompareError(errors.New(path + ": not equal: " + convert2String(srcref).String() + " !=" + convert2String(tarref).String() + "(s/t)"))
+				ctx.addCompareError(errors.New(path + ": not equal: " + Convert2String(srcref).String() + " !=" + Convert2String(tarref).String() + "(s/t)"))
 				return
 			}
 		}

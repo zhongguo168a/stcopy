@@ -6,7 +6,7 @@ import (
 )
 
 // 转化成map类型的值
-func convert2MapValue(val reflect.Value) (r reflect.Value) {
+func Convert2MapValue(val reflect.Value) (r reflect.Value) {
 	switch val.Kind() {
 	case reflect.Int8, reflect.Int16, reflect.Int32:
 		r = reflect.ValueOf(float64(val.Int()))
@@ -38,7 +38,7 @@ func convert2MapValue(val reflect.Value) (r reflect.Value) {
 	return
 }
 
-func convert2String(val reflect.Value) (r reflect.Value) {
+func Convert2String(val reflect.Value) (r reflect.Value) {
 	switch val.Kind() {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		r = reflect.ValueOf(strconv.Itoa(int(val.Uint())))
@@ -55,7 +55,7 @@ func convert2String(val reflect.Value) (r reflect.Value) {
 }
 
 // 转换成Int型
-func convert2Int(val reflect.Value) (r reflect.Value) {
+func Convert2Int(val reflect.Value) (r reflect.Value) {
 	switch val.Kind() {
 	case reflect.String:
 		i, err := strconv.Atoi(val.Interface().(string))
@@ -77,7 +77,7 @@ func convert2Int(val reflect.Value) (r reflect.Value) {
 	return
 }
 
-func convert2Float(val reflect.Value) (r reflect.Value) {
+func Convert2Float(val reflect.Value) (r reflect.Value) {
 	switch val.Kind() {
 	case reflect.String:
 		i, err := strconv.ParseFloat(val.Interface().(string), 64)

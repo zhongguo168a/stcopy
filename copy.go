@@ -687,13 +687,13 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 			if srcref.Type() != provideTyp {
 				switch provideTyp.Kind() {
 				case reflect.String:
-					x = convert2String(srcref)
+					x = Convert2String(srcref)
 				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 					fallthrough
 				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-					x = convert2Int(srcref)
+					x = Convert2Int(srcref)
 				case reflect.Float32, reflect.Float64:
-					x = convert2Float(srcref)
+					x = Convert2Float(srcref)
 				case reflect.Bool:
 					x = convert2Bool(srcref)
 				default:
@@ -711,7 +711,7 @@ func (ctx *Context) copy(source, target Value, provideTyp reflect.Type, inInterf
 			return
 		}())
 		if ctx.convertType == AnyToJsonMap {
-			tarref = convert2MapValue(tarref)
+			tarref = Convert2MapValue(tarref)
 		}
 	}
 
